@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Learning App</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="home">
+<div class="app-container page-container">
+
+  <!-- Greeting -->
+  <p class="course-tag">Good Morning, Alex</p>
+
+  <!-- Header -->
+  <div class="header-row">
+    <h1 class="header-title">Ready for a little code?</h1>
+    <div class="am-badge">AM</div>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-card streak">
+      <div class="stat-value-row">
+        <div class="stat-icon">
+          <!-- SVG: flame icon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ff9800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2c0 0-6 6-6 11a6 6 0 0 0 12 0c0-5-6-11-6-11z"/>
+          </svg>
+        </div>
+        <span class="stat-value">7</span>
+      </div>
+      <span class="stat-label">Day streak</span>
+    </div>
+    <div class="stat-card xp">
+      <div class="stat-value-row">
+        <div class="stat-icon">
+          <!-- SVG: lightning bolt icon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="#5c6bc0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <span class="stat-value">1,270</span>
+      </div>
+      <span class="stat-label">Total XP</span>
+    </div>
+  </div>
+
+  <!-- Today's Goal -->
+  <div class="goal-card">
+    <div class="goal-header">
+      <span class="goal-title">Today's goal</span>
+      <span class="goal-xp">30 / 50 XP</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill"></div>
+    </div>
+    <p class="goal-message">One more lesson keeps your momentum going.</p>
+  </div>
+
+  <!-- Lesson Card -->
+  <div class="lesson-card">
+    <div class="lesson-top-row">
+      <span class="lesson-tag">Python · Beginner</span>
+      <span class="lesson-progress-text">2 / 6 topics</span>
+    </div>
+    <div class="lesson-content-row">
+      <div class="lesson-info">
+        <h2 class="lesson-title">Make a decision</h2>
+        <p class="lesson-subtitle">Conditions · Lesson 1 of 3</p>
+      </div>
+      <div class="lesson-robot">
+        <!-- SVG: robot icon -->
+        <img src="icon/robot.svg" alt="Robot Icon" width=72px height=72px />
+      </div>
+    </div>
+    <div class="progress-bar-bg lesson-progress-bar-bg">
+      <div class="progress-bar-fill lesson-progress-bar-fill"></div>
+    </div>
+    <button class="btn-primary green">
+      <!-- SVG: play icon -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      Continue learning
+    </button>
+  </div>
+
+  <!-- Review Card -->
+  <div class="row-card">
+    <div class="row-card-icon">
+      <!-- SVG: refresh icon -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="#5c6bc0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+    </div>
+    <div class="row-card-info">
+      <p class="row-card-title">Keep your skills sharp</p>
+      <p class="row-card-subtitle">Review Hello World & Variables</p>
+    </div>
+    <div class="row-card-arrow">
+      <!-- SVG: chevron right -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="#c0c4d0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a class="nav-item active" href="#">
+      <div class="nav-icon">
+        <!-- SVG: home icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </div>
+      <span class="nav-label">Home</span>
+    </a>
+    <a href="Lesson.html" class="nav-item" href="#">
+      <div class="nav-icon">
+        <!-- SVG: book/map icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+        </svg>
+      </div>
+      <span class="nav-label">Learn</span>
+    </a>
+    <a href="Practice.html" class="nav-item" href="#">
+      <div class="nav-icon">
+        <!-- SVG: code icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"/>
+          <polyline points="8 6 2 12 8 18"/>
+        </svg>
+      </div>
+      <span class="nav-label">Practice</span>
+    </a>
+    <a href="League.html" class="nav-item" href="#">
+      <div class="nav-icon">
+        <!-- SVG: trophy icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+          <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+          <path d="M4 22h16"/>
+          <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/>
+          <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/>
+          <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+        </svg>
+      </div>
+      <span class="nav-label">League</span>
+    </a>
+    <a href="Profile.html" class="nav-item" href="#">
+      <div class="nav-icon">
+        <!-- SVG: profile/user icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <span class="nav-label">Profile</span>
+    </a>
+  </nav>
+
+</div>
+
+</body>
+</html>
