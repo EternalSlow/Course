@@ -1,0 +1,103 @@
+/* Контейнеры для аутентификации и выбора языка */
+.auth-container, .language-container {
+  max-width: 420px;
+  margin: 80px auto;
+  padding: 32px;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  text-align: center;
+}
+
+.auth-container h2, .language-container h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #3c3c3c;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  font-size: 15px;
+  color: #777;
+  margin-bottom: 24px;
+}
+
+/* Поля ввода */
+.auth-container input {
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 16px;
+  border: 2px solid #e5e5e5;
+  border-radius: 14px;
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.auth-container input:focus {
+  border-color: #5c6bc0;
+  outline: none;
+}
+
+/* Сетка языков */
+.language-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.language-card {
+  border: 2px solid #e5e5e5;
+  border-radius: 16px;
+  padding: 24px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.language-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+}
+
+.language-card.selected {
+  transform: scale(1.03);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.lang-icon {
+  font-size: 36px;
+}
+
+.lang-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #3c3c3c;
+}
+
+/* Кнопки в стиле вашего дизайна */
+.btn-primary {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.btn-primary.green {
+  background: #58cc02;
+  color: white;
+  box-shadow: 0 4px 0 #46a302;
+}
+
+.btn-primary.green:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #46a302;
+}

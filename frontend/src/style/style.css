@@ -106,8 +106,10 @@ body {
    GLOBAL LAYOUT — PAGE CONTAINER (used by journey/practice/profile/league)
    ============================================================ */
 .page-container {
+  width: 390px;
+  height: 844px;
   background: #ffffff;
-  padding: 24px 20px 120px;
+  padding: 12px 10px 60px;
   display: flex;
   flex-direction: column;
 }
@@ -122,12 +124,11 @@ body {
   justify-content: space-between;
 }
 
-.header-row { margin-bottom: 20px; }
-.page-header { margin-bottom: 24px; }
+.page-header { margin-bottom: 0px; }
 
 .header-title,
 .page-title {
-  font-size: 28px;
+  font-size: 25px;
   font-weight: 700;
   color: var(--color-text-strong);
   line-height: 1.15;
@@ -158,7 +159,7 @@ body {
   color: var(--color-muted);
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  text-align: left;
 }
 .greeting { font-weight: 600; letter-spacing: 1px; margin-bottom: 8px; }
 
@@ -384,19 +385,16 @@ body {
    ============================================================ */
 .description {
   font-size: 15px;
+  text-align: left;
   color: var(--color-muted);
   line-height: 1.5;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+  margin-left: 10px;
 }
 
 /* ============================================================
    PAGE: HOME
    ============================================================ */
-body.home { padding: 20px 0; }
-body.home .app-container {
-  background: #f7f8fa;
-  padding: 24px 20px 100px;
-}
 
 /* Home header tweak */
 body.home .header-title { color: var(--color-text); }
@@ -1052,6 +1050,7 @@ body.league .encourage-icon {
 }
 body.league .encourage-icon svg { width: 24px; height: 24px; }
 body.league .encourage-text {
+  text-align: left;
   font-size: 14px;
   color: var(--color-green-dark);
   font-weight: 500;
@@ -1066,7 +1065,7 @@ body.league .leaderboard-list {
   margin-bottom: 20px;
 }
 body.league .leaderboard-item { 
-	padding: 14px 18px;
+	padding: 10px 14px;
 	gap: 14px;
 	border-radius: 20px;
 	display: flex; 
@@ -1143,4 +1142,590 @@ body.league .leaderboard-item.highlight .lb-xp { color: var(--color-green-dark);
   flex-direction: column;
   align-items: center;
   gap: 20px;
+}
+
+/* ===== Lesson Task (страница задания) ===== */
+.lesson-task.page-container {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;               /* корректная высота на мобилках */
+  background: #ffffff;
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
+  display: flex;
+  flex-direction: column;
+  padding: 0;                        /* убираем padding-bottom: 120px */
+  margin: 0 auto;
+}
+
+.lesson-task .app-container {
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px 24px 40px;           /* запас снизу от последнего ответа */
+  box-sizing: border-box;
+  flex: 1;                           /* съедает всё свободное место */
+}
+
+/* Шапка задания */
+.task-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.task-progress-track {
+  flex: 1;
+  height: 16px;
+  background: #e5e5e5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.task-progress-fill {
+  height: 100%;
+  background: #58cc02;
+  border-radius: 8px;
+  transition: width 0.4s ease;
+}
+
+.task-hearts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #ff4b4b;
+  font-size: 16px;
+}
+
+/* Контент задания */
+.task-content {
+  flex: 1;
+}
+
+.task-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #3c3c3c;
+  margin: 0 0 8px 0;
+}
+
+.task-subtitle {
+  font-size: 15px;
+  color: #afafaf;
+  margin: 0 0 24px 0;
+}
+
+.code-example {
+  background: #2d2d2d;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.code-example pre {
+  margin: 0;
+  color: #f8f8f2;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.task-question h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #3c3c3c;
+  margin: 0 0 16px 0;
+}
+
+.task-input {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #e5e5e5;
+  border-radius: 12px;
+  font-family: 'Fira Code', monospace;
+  font-size: 15px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.task-input:focus {
+  border-color: #58cc02;
+}
+
+/* Обратная связь */
+.task-feedback {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  margin-top: 20px;
+  align-items: flex-start;
+}
+
+.task-feedback.correct {
+  background: #f0f9e8;
+  border: 2px solid #58cc02;
+}
+
+.task-feedback.wrong {
+  background: #fff0f0;
+  border: 2px solid #ff4b4b;
+}
+
+.feedback-icon {
+  font-size: 24px;
+}
+
+.feedback-text strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.feedback-text p {
+  margin: 0;
+  font-size: 14px;
+  color: #4b4b4b;
+}
+
+/* Нижняя панель */
+.task-footer {
+  position: sticky;
+  bottom: 0;
+  padding: 16px 24px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  border-top: 2px solid #e5e5e5;
+  background: #fff;
+  z-index: 10;
+  flex-shrink: 0;                    /* не сжимается при длинном контенте */
+}
+
+.task-check-btn,
+.task-continue-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+
+.task-check-btn {
+  background: #58cc02;
+  color: #fff;
+  border-bottom: 4px solid #46a302;
+}
+
+.task-check-btn:hover:not(:disabled) {
+  background: #61e002;
+}
+
+.task-check-btn:disabled {
+  background: #e5e5e5;
+  color: #afafaf;
+  border-bottom-color: #ccc;
+  cursor: not-allowed;
+}
+
+.task-continue-btn.correct {
+  background: #58cc02;
+  color: #fff;
+  border-bottom: 4px solid #46a302;
+}
+
+.task-continue-btn.wrong {
+  background: #ff4b4b;
+  color: #fff;
+  border-bottom: 4px solid #cc0000;
+}
+
+/* ===== LESSON TASK — Duolingo style ===== */
+.lesson-task.page-container {
+  min-height: 100vh;
+  background: #ffffff;
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 120px;
+}
+
+.lesson-task .app-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ===== ШАПКА ===== */
+.task-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.close-btn:hover svg {
+  stroke: #3c3c3c;
+}
+
+.task-progress-track {
+  flex: 1;
+  height: 16px;
+  background: #e5e5e5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.task-progress-fill {
+  height: 100%;
+  background: #58cc02;
+  border-radius: 8px;
+  transition: width 0.4s ease;
+}
+
+.task-progress-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #afafaf;
+  white-space: nowrap;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* ===== МАСКОТ ===== */
+.mascot-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.mascot-bubble {
+  background: #f7f7f7;
+  border-radius: 16px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #4b4b4b;
+  line-height: 1.4;
+  position: relative;
+  margin-top: 10px;
+}
+
+.mascot-bubble::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 16px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid #f7f7f7;
+}
+
+.mascot-bubble p {
+  margin: 0;
+}
+
+/* ===== ЗАГОЛОВОК ЗАДАНИЯ ===== */
+.task-question-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #3c3c3c;
+  margin: 0 0 20px 0;
+  line-height: 1.3;
+}
+
+/* ===== БЛОК КОДА ===== */
+.code-block {
+  background: #2d2d2d;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+
+.code-block pre {
+  margin: 0;
+  color: #f8f8f2;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* ===== ВАРИАНТЫ ОТВЕТОВ ===== */
+.answer-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.answer-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 2px solid #e5e5e5;
+  border-radius: 16px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  font-family: inherit;
+  font-size: 16px;
+  color: #3c3c3c;
+}
+
+.answer-option:hover:not(:disabled) {
+  background: #f7f7f7;
+  border-color: #ccc;
+}
+
+.answer-option.selected {
+  border-color: #58cc02;
+  background: #f0f9e8;
+}
+
+.answer-option:disabled {
+  cursor: default;
+}
+
+.option-radio {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.answer-option.selected .option-radio {
+  border-color: #58cc02;
+  background: #fff;
+}
+
+.option-text {
+  font-weight: 600;
+  flex: 1;
+}
+
+/* ===== ОБРАТНАЯ СВЯЗЬ ===== */
+.task-feedback {
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.task-feedback.correct {
+  background: #f0f9e8;
+  border: 2px solid #58cc02;
+}
+
+.task-feedback.wrong {
+  background: #fff0f0;
+  border: 2px solid #ff4b4b;
+}
+
+.feedback-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.feedback-icon {
+  font-size: 22px;
+}
+
+.feedback-title {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.task-feedback.correct .feedback-title {
+  color: #58a700;
+}
+
+.task-feedback.wrong .feedback-title {
+  color: #ff4b4b;
+}
+
+.feedback-explanation {
+  margin: 8px 0 0 0;
+  font-size: 14px;
+  color: #4b4b4b;
+}
+
+/* ===== НИЖНЯЯ ПАНЕЛЬ ===== */
+.task-footer {
+  position: fixed;
+  left: 10%;
+  right: 10%;
+  padding: 16px 24px;
+  background: #fff;
+  z-index: 100;
+}
+
+.task-footer.correct {
+  background: #f0f9e8;
+  border-top-color: #58cc02;
+}
+
+.task-footer.wrong {
+  background: #fff0f0;
+  border-top-color: #ff4b4b;
+}
+
+.task-footer .app-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0;
+  flex: none;                        /* футер не должен растягиваться */
+}
+
+.task-check-btn,
+.task-continue-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.task-check-btn {
+  background: #58cc02;
+  color: #fff;
+  border-bottom: 4px solid #46a302;
+}
+
+.task-check-btn:hover:not(:disabled) {
+  background: #61e002;
+}
+
+.task-check-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.task-check-btn:disabled {
+  background: #e5e5e5;
+  color: #afafaf;
+  border-bottom-color: #ccc;
+  cursor: not-allowed;
+}
+
+.task-continue-btn.correct {
+  background: #58cc02;
+  color: #fff;
+  border-bottom: 4px solid #46a302;
+}
+
+.task-continue-btn.wrong {
+  background: #ff4b4b;
+  color: #fff;
+  border-bottom: 4px solid #cc0000;
+}
+
+.task-continue-btn:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+/* ===== ЭКРАН ЗАВЕРШЕНИЯ ===== */
+.lesson-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  text-align: center;
+}
+
+.complete-icon {
+  font-size: 80px;
+  margin-bottom: 16px;
+}
+
+.complete-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #3c3c3c;
+  margin: 0 0 8px 0;
+}
+
+.complete-subtitle {
+  font-size: 16px;
+  color: #afafaf;
+  margin: 0 0 32px 0;
+}
+
+.complete-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+  width: 100%;
+}
+
+.stat-card {
+  flex: 1;
+  padding: 20px;
+  background: #f7f7f7;
+  border-radius: 16px;
+  border: 2px solid #e5e5e5;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #58cc02;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #afafaf;
+  margin-top: 4px;
 }

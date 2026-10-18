@@ -1,0 +1,245 @@
+/* ===== Общие стили страницы ===== */
+.daily-goal.page-container {
+  min-height: 100vh;
+  background: #ffffff;
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
+  padding-bottom: 100px;
+}
+
+.app-container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 24px;
+}
+
+/* ===== Прогресс-бар сверху ===== */
+.top-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.progress-track {
+  flex: 1;
+  height: 16px;
+  background: #e5e5e5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #58cc02;
+  border-radius: 8px;
+  transition: width 0.5s ease;
+}
+
+.progress-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #afafaf;
+  white-space: nowrap;
+}
+
+/* ===== Маскот ===== */
+.mascot-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.mascot {
+  flex-shrink: 0;
+}
+
+.mascot-bubble {
+  background: #f0f0f0;
+  border-radius: 16px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #4b4b4b;
+  line-height: 1.4;
+  position: relative;
+}
+
+.mascot-bubble::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 16px;
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid #f0f0f0;
+}
+
+.mascot-bubble p {
+  margin: 0;
+}
+
+/* ===== Заголовок ===== */
+.goal-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #3c3c3c;
+  margin: 0 0 8px 0;
+}
+
+.goal-subtitle {
+  font-size: 15px;
+  color: #afafaf;
+  margin: 0 0 24px 0;
+}
+
+/* ===== Варианты целей ===== */
+.goal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.goal-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 2px solid #e5e5e5;
+  border-radius: 16px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-family: inherit;
+}
+
+.goal-option:hover {
+  border-color: #ccc;
+  background: #fafafa;
+}
+
+.goal-option.selected {
+  border-color: #58cc02;
+  background: #f0f9e8;
+}
+
+.option-radio {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.goal-option.selected .option-radio {
+  border-color: #58cc02;
+  background: #fff;
+}
+
+.option-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #3c3c3c;
+}
+
+.option-time {
+  font-size: 13px;
+  color: #afafaf;
+}
+
+.option-xp {
+  font-size: 15px;
+  font-weight: 700;
+  color: #58cc02;
+  white-space: nowrap;
+}
+
+/* ===== Подсказка ===== */
+.goal-hint {
+  text-align: center;
+  font-size: 13px;
+  color: #afafaf;
+  margin: 16px 0 24px 0;
+}
+
+/* ===== Кнопка ===== */
+.goal-submit {
+  width: 100%;
+  padding: 16px;
+  background: #58cc02;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 4px solid #46a302;
+}
+
+.goal-submit:hover {
+  background: #61e002;
+}
+
+.goal-submit:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.goal-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ===== Информация о текущем уроке ===== */
+.current-lesson-info {
+  margin-top: 32px;
+  padding: 20px;
+  background: #f7f7f7;
+  border-radius: 16px;
+  border: 2px solid #e5e5e5;
+}
+
+.current-lesson-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #3c3c3c;
+}
+
+.current-lesson-info p {
+  margin: 0 0 12px 0;
+  color: #777;
+  font-size: 14px;
+}
+
+.lesson-code {
+  background: #2d2d2d;
+  border-radius: 10px;
+  padding: 14px;
+  overflow-x: auto;
+}
+
+.lesson-code pre {
+  margin: 0;
+  color: #f8f8f2;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
