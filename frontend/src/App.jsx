@@ -12,6 +12,8 @@ import LessonTask from './LessonTask';
 import Firstpage from './First-page';
 import League from './League';
 import Practice from './Practice';
+import Settings from './Settings';
+import Admin from './Admin';
 import './style/App.css';
 import Login from './Login';
 
@@ -29,6 +31,8 @@ function App() {
           <Route path="/select-language" element={protect(<LanguageSelection />)} />
           <Route path="/home"     element={protect(<Home />)} />
           <Route path="/profile"  element={protect(<Profile />)} />
+          <Route path="/settings" element={protect(<Settings />)} />
+          <Route path="/admin"    element={protect(<Admin />)} />
           <Route path="/lesson"   element={protect(<Lesson />)} />
           <Route path="/lesson/:id" element={protect(<Lesson />)} />
           <Route path="/task/:id" element={protect(<LessonTask />)} />

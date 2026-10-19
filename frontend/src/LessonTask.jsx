@@ -148,6 +148,7 @@ export default function LessonTask() {
 
     // 1. Сообщаем серверу о завершении урока
     let nextLessonNumber = lesson.number + 1;
+    let completionData = null;
     try {
       const res = await fetch(`${API_BASE}/api/user/${userId}/complete-lesson`, {
         method: 'POST',
@@ -155,6 +156,7 @@ export default function LessonTask() {
         body: JSON.stringify({ lessonNumber: lesson.number }),
       });
       const data = await res.json();
+      if (res.ok) completionData = data;
       if (res.ok && data.nextLesson) {
         nextLessonNumber = data.nextLesson;
       }
@@ -203,16 +205,19 @@ export default function LessonTask() {
       dailyXP = parseInt(localStorage.getItem('dailyXP') || '30');
     }
 
+    const xpEarned = completionData?.xpEarned ?? Number(lesson.xp_reward || 0);
+    const totalXP = completionData?.totalXP ?? userXP;
+
     setCompleteData({
       lessonTitle: lesson.title,
       nextLessonTitle,
-      xpEarned: lesson.xp_reward || 30,
+      xpEarned,
       accuracy,
       timeSpent: timeFormatted,
       correctAnswers: lessonStats.correctAnswers,
       totalAnswers: lessonStats.totalAnswers,
-      totalXP: userXP,
-      previousXP: userXP - (lesson.xp_reward || 30),
+      totalXP,
+      previousXP: completionData?.previousXP ?? totalXP - xpEarned,
       dailyXP,
       dailyGoal,
       streakDays: streak,

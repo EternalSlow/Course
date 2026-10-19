@@ -1,10 +1,12 @@
 import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import './style/style.css';
 import robot from './assets/Big-robot.svg';
 
 export default function FirstPage() {
+  const navigate = useNavigate();
   const handleStart = () => {
-    window.location.href = 'language.html';
+    navigate('/register');
   };
 
   return (
@@ -46,9 +48,9 @@ export default function FirstPage() {
               <span style={{ fontSize: '18px', marginRight: '-4px' }}>➔</span>
               {"Let's start coding"}
             </button>
-            <a href="#" className="course-tag">
+            <Link to="/login" className="course-tag">
               I already have an account
-            </a>
+            </Link>
           </div>
         </div>
       </div>

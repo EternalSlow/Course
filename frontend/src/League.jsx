@@ -1,19 +1,17 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './style/style.css';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 
-const podium = [
-  { rank: '2ND', initials: 'LC', name: 'Leo', xp: '1,540 XP', place: 'second' },
-  { rank: '★ 1ST', initials: 'MP', name: 'Maya', xp: '1,820 XP', place: 'first' },
-  { rank: '3RD', initials: 'SK', name: 'Sam', xp: '1,390 XP', place: 'third' },
-];
+const API_BASE = 'http://localhost:5000/api';
+const podiumPlaces = {
+  1: { label: '★ 1ST', place: 'first' },
+  2: { label: '2ND', place: 'second' },
+  3: { label: '3RD', place: 'third' },
+};
 
-const leaderboard = [
-  { rank: 4, initials: 'AM', name: 'Alex Morgan', xp: '1,270 XP', you: true },
-  { rank: 5, initials: 'NC', name: 'Nina Chen', xp: '1,160 XP' },
-  { rank: 6, initials: 'OA', name: 'Omar Ali', xp: '1,080 XP' },
-  { rank: 7, initials: 'JP', name: 'Jules Park', xp: '970 XP' },
-];
+const getInitials = (name = '') => name.trim().slice(0, 2).toUpperCase() || '?';
+const formatXP = (xp) => `${Number(xp || 0).toLocaleString()} XP`;
 
 const NavIcons = {
   home: (
@@ -61,10 +59,48 @@ const navItems = [
 ];
 
 export default function League() {
+  const { user } = useAuth();
+  const [learners, setLearners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   useEffect(() => {
     document.body.classList.add('league');
     return () => document.body.classList.remove('league');
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch(`${API_BASE}/league`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((data) => {
+        if (!Array.isArray(data.learners)) throw new Error('Invalid leaderboard data');
+        setLearners(data.learners);
+      })
+      .catch((fetchError) => {
+        if (fetchError.name !== 'AbortError') setError('Unable to load the leaderboard.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const podium = learners.slice(0, 3)
+    .map((learner) => ({ ...learner, ...podiumPlaces[learner.rank] }))
+    .sort((a, b) => [2, 1, 3].indexOf(a.rank) - [2, 1, 3].indexOf(b.rank));
+  const leaderboard = learners.slice(3);
+  const currentLearner = learners.find((learner) => learner.id === user?.userId);
+  const currentRank = currentLearner?.rank;
+  const topThreeGap = currentRank > 3
+    ? Math.max(0, learners[2].xp - currentLearner.xp)
+    : null;
+
   return (
     <div className="league page-container">
       <div className="app-container">
@@ -105,11 +141,13 @@ export default function League() {
         {/* Podium */}
         <div className="podium">
           {podium.map((p) => (
-            <div key={p.name} className={`podium-card ${p.place}`}>
-              <div className="podium-rank">{p.rank}</div>
-              <div className="podium-avatar">{p.initials}</div>
-              <div className="podium-name">{p.name}</div>
-              <div className="podium-xp">{p.xp}</div>
+            <div key={p.id} className={`podium-card ${p.place}`}>
+              <div className="podium-rank">{p.label}</div>
+              <div className="podium-avatar">
+                {p.avatar ? <img src={`http://localhost:5000${p.avatar}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : getInitials(p.username)}
+              </div>
+              <div className="podium-name">{p.username}</div>
+              <div className="podium-xp">{formatXP(p.xp)}</div>
             </div>
           ))}
         </div>
@@ -123,24 +161,31 @@ export default function League() {
             </svg>
           </div>
           <div className="encourage-text">
-            You're #4 of 12 learners. Only 120 XP from the top three!
+            {currentRank
+              ? `You're #${currentRank} of ${learners.length} learners.${topThreeGap === null ? ' Great work in the top three!' : ` Only ${formatXP(topThreeGap)} from the top three!`}`
+              : 'Join the leaderboard by completing lessons and earning XP.'}
           </div>
         </div>
 
         {/* Leaderboard List */}
         <div className="leaderboard-list">
+          {loading && <p>Loading leaderboard...</p>}
+          {error && <p role="alert">{error}</p>}
+          {!loading && !error && learners.length === 0 && <p>No learners yet.</p>}
           {leaderboard.map((row) => (
             <div
-              key={row.rank}
-              className={`leaderboard-item${row.you ? ' highlight' : ''}`}
+              key={row.id}
+              className={`leaderboard-item${row.id === user?.userId ? ' highlight' : ''}`}
             >
               <div className="lb-rank">{row.rank}</div>
-              <div className="lb-avatar">{row.initials}</div>
-              <div className="lb-info">
-                <div className="lb-name">{row.name}</div>
-                {row.you && <div className="lb-you">YOU</div>}
+              <div className="lb-avatar">
+                {row.avatar ? <img src={`http://localhost:5000${row.avatar}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : getInitials(row.username)}
               </div>
-              <div className="lb-xp">{row.xp}</div>
+              <div className="lb-info">
+                <div className="lb-name">{row.username}</div>
+                {row.id === user?.userId && <div className="lb-you">YOU</div>}
+              </div>
+              <div className="lb-xp">{formatXP(row.xp)}</div>
             </div>
           ))}
         </div>

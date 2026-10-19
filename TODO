@@ -1,0 +1,6 @@
+[x] Change UI in Login.jsx & Register.jsx to be in same style as in other .css and .jsx files.
+[x] Profile.jsx has stub data. Change to data from the database.
+[x] Change Profile by replacing exit button with settings button. Settings page defined in new file Settings.jsx. Settings.jsx must contain options for changing programming language, user's name, user's icon, and an exit button.
+[x] Make new admin panel defined in Admin.jsx. Admin.jsx must have a way to make new lessons, create, rename, delete users and user icons. Server checks for admin user on startup, and creates one if there isn't any. Upon login, password must be changed by the logged admin user.
+[x] Lesson.jsx has a bug. When user completes lesson, earned experience isn't calculated correctly (e.g, needs to be 0->50)
+[x] Change First-page.jsx such that "Let's start coding" button leads to registration page and then to language choosing page. "I already have an account" button must lead to login page.

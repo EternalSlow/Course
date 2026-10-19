@@ -13,30 +13,35 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    const res = await fetch('http://localhost:5000/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) return setError(data.error || 'Ошибка');
-    doLogin({ token: data.token, userId: data.userId, username: data.username });
-    navigate('/home');
+    try {
+      const res = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) return setError(data.error || 'Ошибка');
+      doLogin({ ...data, isAdmin: data.isAdmin, mustChangePassword: data.mustChangePassword });
+      navigate(data.isAdmin ? '/admin' : '/home', { replace: true });
+    } catch {
+      setError('Не удалось связаться с сервером. Проверьте соединение.');
+    }
   };
 
   return (
-    <div className="page-container">
-      <div className="app-container" style={{ padding: 24 }}>
-        <h1 className="page-title">Вход</h1>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
+    <div className="auth-page page-container">
+      <div className="app-container auth-panel">
+        <p className="course-tag">Byte</p>
+        <h1 className="header-title">Вход</h1>
+        <form className="auth-form" onSubmit={handleSubmit}>
           <input value={login} onChange={(e) => setLogin(e.target.value)}
-                 placeholder="Email или username" required />
+                 placeholder="Email или username" autoComplete="username" required />
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                 placeholder="Пароль" required />
-          {error && <p style={{ color: '#ff4b4b' }}>{error}</p>}
+                 placeholder="Пароль" autoComplete="current-password" required />
+          {error && <p className="auth-error" role="alert">{error}</p>}
           <button type="submit" className="btn-primary green">Войти</button>
         </form>
-        <p style={{ marginTop: 12, textAlign: 'center' }}>
+        <p className="auth-switch">
           Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
         </p>
       </div>

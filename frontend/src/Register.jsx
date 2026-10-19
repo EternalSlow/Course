@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import './style/App.css';
+import './style/style.css';
 import { useAuth } from './AuthContext';
 
 const Register = () => {
@@ -49,11 +49,13 @@ const Register = () => {
   };
 
   return (
-    <div className="auth-container">
-      <h2>Создайте аккаунт</h2>
-      <p className="subtitle">Начните свой путь в программировании</p>
+    <div className="auth-page page-container">
+      <div className="app-container auth-panel">
+      <p className="course-tag">Byte</p>
+      <h1 className="header-title">Создайте аккаунт</h1>
+      <p className="auth-subtitle">Начните свой путь в программировании</p>
 
-      <form onSubmit={handleRegister}>
+      <form className="auth-form" onSubmit={handleRegister}>
         <input
           type="text"
           placeholder="Имя пользователя"
@@ -81,7 +83,7 @@ const Register = () => {
           minLength={6}
         />
 
-        {error && <p className="form-error">{error}</p>}
+        {error && <p className="auth-error" role="alert">{error}</p>}
 
         <button
           type="submit"
@@ -92,9 +94,10 @@ const Register = () => {
         </button>
       </form>
 
-      <p style={{ marginTop: 12, textAlign: 'center' }}>
+      <p className="auth-switch">
         Уже есть аккаунт? <Link to="/login">Войти</Link>
       </p>
+      </div>
     </div>
   );
 };

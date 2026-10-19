@@ -3,6 +3,7 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const app = express();
 const multer = require('multer');
@@ -30,7 +31,9 @@ db.serialize(() => {
     rank INTEGER DEFAULT 10,
     daily_goal INTEGER DEFAULT 50,
     daily_minutes INTEGER DEFAULT 0,
-    daily_xp INTEGER DEFAULT 0
+    daily_xp INTEGER DEFAULT 0,
+    is_admin INTEGER DEFAULT 0,
+    must_change_password INTEGER DEFAULT 0
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS lessons (
@@ -54,6 +57,9 @@ db.serialize(() => {
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (lesson_id) REFERENCES lessons(id)
   )`);
+
+  db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_user_progress_user_lesson
+    ON user_progress(user_id, lesson_id)`);
 
   db.run(`CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -222,6 +228,96 @@ db.get(`SELECT COUNT(*) AS count FROM lessons`, (err, row) => {
 
 const SECRET_KEY = 'your-super-secret-key';
 
+function bootstrapAdmin(onReady) {
+  db.all(`PRAGMA table_info(users)`, (err, columns) => {
+    if (err) {
+      console.error('Unable to check user schema:', err.message);
+      return onReady();
+    }
+
+    const names = new Set(columns.map((column) => column.name));
+    const missingColumns = [
+      ['is_admin', 'INTEGER DEFAULT 0'],
+      ['must_change_password', 'INTEGER DEFAULT 0'],
+    ].filter(([name]) => !names.has(name));
+
+    const addMissingColumn = (index) => {
+      if (index < missingColumns.length) {
+        const [name, definition] = missingColumns[index];
+        return db.run(`ALTER TABLE users ADD COLUMN ${name} ${definition}`, (migrationError) => {
+          if (migrationError) {
+            console.error('Unable to update user schema:', migrationError.message);
+            return onReady();
+          }
+          addMissingColumn(index + 1);
+        });
+      }
+
+      db.get(`SELECT id FROM users WHERE is_admin = 1 LIMIT 1`, async (adminError, admin) => {
+        if (adminError || admin) {
+          if (adminError) console.error('Unable to check admin account:', adminError.message);
+          return onReady();
+        }
+
+        const username = process.env.ADMIN_USERNAME || 'admin';
+        const email = process.env.ADMIN_EMAIL || 'admin@byte.local';
+        const generatedPassword = !process.env.ADMIN_PASSWORD;
+        const password = process.env.ADMIN_PASSWORD || crypto.randomBytes(18).toString('hex');
+
+        try {
+          const passwordHash = await bcrypt.hash(password, 12);
+          db.run(
+            `INSERT INTO users (username, email, password, is_admin, must_change_password)
+             VALUES (?, ?, ?, 1, 1)`,
+            [username, email, passwordHash],
+            function (createError) {
+              if (createError) {
+                console.error('Unable to create admin account:', createError.message);
+              } else {
+                console.log(`Initial admin login: ${username} (${email})`);
+                if (generatedPassword) console.log(`Initial admin password: ${password}`);
+                console.log('Change this password after the first login.');
+              }
+              onReady();
+            }
+          );
+        } catch (hashError) {
+          console.error('Unable to create admin password:', hashError.message);
+          onReady();
+        }
+      });
+    };
+
+    addMissingColumn(0);
+  });
+}
+
+function requireAdmin(req, res, next) {
+  const match = (req.get('authorization') || '').match(/^Bearer (.+)$/);
+  if (!match) return res.status(401).json({ error: 'Sign in required' });
+
+  jwt.verify(match[1], SECRET_KEY, (tokenError, payload) => {
+    if (tokenError) return res.status(401).json({ error: 'Invalid session' });
+    db.get(
+      `SELECT id, is_admin, must_change_password FROM users WHERE id = ?`,
+      [payload.id],
+      (dbError, user) => {
+        if (dbError) return res.status(500).json({ error: 'Unable to check admin access' });
+        if (!user?.is_admin) return res.status(403).json({ error: 'Admin access required' });
+        req.adminUser = user;
+        next();
+      }
+    );
+  });
+}
+
+function requireChangedAdminPassword(req, res, next) {
+  if (req.adminUser.must_change_password) {
+    return res.status(428).json({ error: 'Change the admin password before using this page' });
+  }
+  next();
+}
+
 // ---------- API ----------
 app.get('/api/user/:id/lesson/:number/tasks', (req, res) => {
   const userId = Number(req.params.id);
@@ -297,11 +393,50 @@ app.post('/api/user/:id/language', (req, res) => {
   );
 });
 
+app.patch('/api/user/:id/profile', (req, res) => {
+  const username = typeof req.body.username === 'string' ? req.body.username.trim() : '';
+  if (username.length < 3 || username.length > 32) {
+    return res.status(400).json({ error: 'Name must contain 3 to 32 characters' });
+  }
+
+  db.run(
+    `UPDATE users SET username = ? WHERE id = ?`,
+    [username, req.params.id],
+    function (err) {
+      if (err?.code === 'SQLITE_CONSTRAINT') {
+        return res.status(409).json({ error: 'That name is already in use' });
+      }
+      if (err) return res.status(500).json({ error: 'Unable to update profile' });
+      if (!this.changes) return res.status(404).json({ error: 'User not found' });
+      res.json({ username });
+    }
+  );
+});
+
+app.get('/api/league', (_req, res) => {
+  db.all(
+    `SELECT id, username, xp, avatar FROM users ORDER BY xp DESC, id ASC`,
+    [],
+    (err, learners) => {
+      if (err) {
+        console.error('DB error /api/league:', err.message);
+        return res.status(500).json({ error: 'Не удалось загрузить рейтинг' });
+      }
+
+      res.json({
+        learners: learners.map((learner, index) => ({ ...learner, rank: index + 1 })),
+      });
+    }
+  );
+});
+
 app.get('/api/user/:id', (req, res) => {
   const { id } = req.params;
   db.get(
-    `SELECT id, username, email, language, current_lesson, total_lessons,
-            xp, streak, rank, avatar
+        `SELECT id, username, email, language, current_lesson, total_lessons,
+          xp, streak,
+          (SELECT COUNT(*) + 1 FROM users AS ranked_users WHERE ranked_users.xp > users.xp) AS rank,
+          avatar
      FROM users WHERE id = ?`,
     [id],
     (err, row) => {
@@ -370,31 +505,86 @@ app.get('/api/user/:id/lesson/:number', (req, res) => {
 });
 
 app.post('/api/user/:id/complete-lesson', (req, res) => {
-  const { id } = req.params;
-  const { lessonNumber } = req.body;
+  const userId = Number(req.params.id);
+  const lessonNumber = Number(req.body.lessonNumber);
+  if (!Number.isInteger(userId) || !Number.isInteger(lessonNumber) || lessonNumber < 1) {
+    return res.status(400).json({ error: 'Invalid user or lesson number' });
+  }
 
-  db.run(
-    `UPDATE lessons SET status = 'completed'
-     WHERE id IN (SELECT id FROM lessons WHERE language = (SELECT language FROM users WHERE id = ?) AND lesson_number = ?)`,
-    [id, lessonNumber],
-    function (err) {
-      if (err) return res.status(500).json({ error: 'Ошибка обновления' });
+  db.get(`SELECT language, xp FROM users WHERE id = ?`, [userId], (userError, user) => {
+    if (userError) return res.status(500).json({ error: 'Unable to load user' });
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
-      const nextNumber = parseInt(lessonNumber) + 1;
-      db.run(
-        `UPDATE lessons SET status = 'active'
-         WHERE id IN (SELECT id FROM lessons WHERE language = (SELECT language FROM users WHERE id = ?) AND lesson_number = ? AND status = 'locked')`,
-        [id, nextNumber],
-        function (err) {
-          if (err) return res.status(500).json({ error: 'Ошибка разблокировки' });
+    db.get(
+      `SELECT id, xp_reward FROM lessons WHERE language = ? AND lesson_number = ?`,
+      [user.language, lessonNumber],
+      (lessonError, lesson) => {
+        if (lessonError) return res.status(500).json({ error: 'Unable to load lesson' });
+        if (!lesson) return res.status(404).json({ error: 'Урок не найден' });
 
-          db.run(`UPDATE users SET current_lesson = ? WHERE id = ?`, [nextNumber, id], () => {
-            res.json({ message: 'Урок завершён!', nextLesson: nextNumber, unlocked: true });
-          });
-        }
-      );
-    }
-  );
+        db.run(
+          `INSERT INTO user_progress (user_id, lesson_id, completed)
+           VALUES (?, ?, 1)
+           ON CONFLICT(user_id, lesson_id) DO UPDATE SET completed = 1
+           WHERE user_progress.completed = 0`,
+          [userId, lesson.id],
+          function (progressError) {
+            if (progressError) return res.status(500).json({ error: 'Unable to record lesson progress' });
+            const xpEarned = this.changes ? Number(lesson.xp_reward) || 0 : 0;
+            const nextNumber = lessonNumber + 1;
+
+            const finishResponse = (totalXP) => res.json({
+              message: 'Урок завершён!',
+              nextLesson: nextNumber,
+              unlocked: true,
+              xpEarned,
+              previousXP: user.xp,
+              totalXP,
+              alreadyCompleted: xpEarned === 0,
+            });
+
+            const updateProgression = () => {
+              db.run(
+                `UPDATE lessons SET status = 'completed' WHERE id = ?`,
+                [lesson.id],
+                (completeError) => {
+                  if (completeError) return res.status(500).json({ error: 'Unable to complete lesson' });
+                  db.run(
+                    `UPDATE lessons SET status = 'active'
+                     WHERE language = ? AND lesson_number = ? AND status = 'locked'`,
+                    [user.language, nextNumber],
+                    (unlockError) => {
+                      if (unlockError) return res.status(500).json({ error: 'Unable to unlock next lesson' });
+                      db.get(`SELECT xp FROM users WHERE id = ?`, [userId], (xpError, updatedUser) => {
+                        if (xpError || !updatedUser) return res.status(500).json({ error: 'Unable to load updated XP' });
+                        finishResponse(updatedUser.xp);
+                      });
+                    }
+                  );
+                }
+              );
+            };
+
+            if (xpEarned > 0) {
+              db.run(
+                `UPDATE users SET xp = xp + ?, current_lesson = ? WHERE id = ?`,
+                [xpEarned, nextNumber, userId],
+                (xpError) => {
+                  if (xpError) return res.status(500).json({ error: 'Unable to award XP' });
+                  updateProgression();
+                }
+              );
+            } else {
+              db.run(`UPDATE users SET current_lesson = ? WHERE id = ?`, [nextNumber, userId], (updateError) => {
+                if (updateError) return res.status(500).json({ error: 'Unable to update lesson progress' });
+                updateProgression();
+              });
+            }
+          }
+        );
+      }
+    );
+  });
 });
 
 // ВНИМАНИЕ: колонок daily_goal / daily_minutes / daily_xp нет в таблице users.
@@ -429,12 +619,229 @@ app.post('/api/login', (req, res) => {
         userId: user.id,
         username: user.username,
         language: user.language,
+        isAdmin: Boolean(user.is_admin),
+        mustChangePassword: Boolean(user.must_change_password),
       });
     }
   );
 });
 
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`Backend запущен на http://localhost:${PORT}`);
+app.post('/api/admin/change-password', requireAdmin, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (typeof newPassword !== 'string' || newPassword.length < 12) {
+    return res.status(400).json({ error: 'New password must contain at least 12 characters' });
+  }
+
+  db.get(`SELECT password FROM users WHERE id = ?`, [req.adminUser.id], async (err, row) => {
+    if (err || !row) return res.status(500).json({ error: 'Unable to check current password' });
+    if (!await bcrypt.compare(currentPassword || '', row.password)) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    try {
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      db.run(
+        `UPDATE users SET password = ?, must_change_password = 0 WHERE id = ?`,
+        [passwordHash, req.adminUser.id],
+        (updateError) => {
+          if (updateError) return res.status(500).json({ error: 'Unable to update password' });
+          res.json({ message: 'Password changed' });
+        }
+      );
+    } catch {
+      res.status(500).json({ error: 'Unable to update password' });
+    }
+  });
+});
+
+app.get('/api/admin/users', requireAdmin, requireChangedAdminPassword, (_req, res) => {
+  db.all(
+    `SELECT id, username, email, language, xp, avatar, is_admin FROM users ORDER BY id`,
+    [],
+    (err, users) => {
+      if (err) return res.status(500).json({ error: 'Unable to load users' });
+      res.json({ users });
+    }
+  );
+});
+
+app.post('/api/admin/users', requireAdmin, requireChangedAdminPassword, async (req, res) => {
+  const { username, email, password } = req.body;
+  if (typeof username !== 'string' || username.trim().length < 3 ||
+      typeof email !== 'string' || !email.includes('@') ||
+      typeof password !== 'string' || password.length < 8) {
+    return res.status(400).json({ error: 'Enter a name, valid email, and password of at least 8 characters' });
+  }
+
+  try {
+    const passwordHash = await bcrypt.hash(password, 10);
+    db.run(
+      `INSERT INTO users (username, email, password) VALUES (?, ?, ?)`,
+      [username.trim(), email.trim(), passwordHash],
+      function (err) {
+        if (err?.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ error: 'Name or email is already in use' });
+        if (err) return res.status(500).json({ error: 'Unable to create user' });
+        res.status(201).json({ id: this.lastID, username: username.trim(), email: email.trim() });
+      }
+    );
+  } catch {
+    res.status(500).json({ error: 'Unable to create user' });
+  }
+});
+
+app.patch('/api/admin/users/:id', requireAdmin, requireChangedAdminPassword, (req, res) => {
+  const username = typeof req.body.username === 'string' ? req.body.username.trim() : '';
+  if (username.length < 3 || username.length > 32) {
+    return res.status(400).json({ error: 'Name must contain 3 to 32 characters' });
+  }
+
+  db.run(
+    `UPDATE users SET username = ? WHERE id = ? AND is_admin = 0`,
+    [username, req.params.id],
+    function (err) {
+      if (err?.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ error: 'Name is already in use' });
+      if (err) return res.status(500).json({ error: 'Unable to rename user' });
+      if (!this.changes) return res.status(404).json({ error: 'User not found' });
+      res.json({ username });
+    }
+  );
+});
+
+app.delete('/api/admin/users/:id', requireAdmin, requireChangedAdminPassword, (req, res) => {
+  db.get(`SELECT avatar FROM users WHERE id = ? AND is_admin = 0`, [req.params.id], (err, user) => {
+    if (err) return res.status(500).json({ error: 'Unable to load user' });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    db.run(`DELETE FROM user_progress WHERE user_id = ?`, [req.params.id], (progressError) => {
+      if (progressError) return res.status(500).json({ error: 'Unable to remove user progress' });
+      db.run(`DELETE FROM users WHERE id = ? AND is_admin = 0`, [req.params.id], function (deleteError) {
+        if (deleteError) return res.status(500).json({ error: 'Unable to delete user' });
+        if (user.avatar) fs.unlink(path.join(__dirname, user.avatar), () => {});
+        res.json({ deleted: true });
+      });
+    });
+  });
+});
+
+app.post('/api/admin/users/:id/avatar', requireAdmin, requireChangedAdminPassword, upload.single('avatar'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Image file required' });
+  const avatarPath = `/uploads/avatars/${req.file.filename}`;
+  db.get(`SELECT avatar FROM users WHERE id = ? AND is_admin = 0`, [req.params.id], (err, user) => {
+    if (err || !user) {
+      fs.unlink(req.file.path, () => {});
+      return res.status(err ? 500 : 404).json({ error: err ? 'Unable to load user' : 'User not found' });
+    }
+    db.run(`UPDATE users SET avatar = ? WHERE id = ?`, [avatarPath, req.params.id], (updateError) => {
+      if (updateError) return res.status(500).json({ error: 'Unable to save user icon' });
+      if (user.avatar) fs.unlink(path.join(__dirname, user.avatar), () => {});
+      res.json({ avatar: avatarPath });
+    });
+  });
+});
+
+app.delete('/api/admin/users/:id/avatar', requireAdmin, requireChangedAdminPassword, (req, res) => {
+  db.get(`SELECT avatar FROM users WHERE id = ? AND is_admin = 0`, [req.params.id], (err, user) => {
+    if (err) return res.status(500).json({ error: 'Unable to load user' });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    db.run(`UPDATE users SET avatar = NULL WHERE id = ?`, [req.params.id], (updateError) => {
+      if (updateError) return res.status(500).json({ error: 'Unable to remove user icon' });
+      if (user.avatar) fs.unlink(path.join(__dirname, user.avatar), () => {});
+      res.json({ avatar: null });
+    });
+  });
+});
+
+app.get('/api/admin/lessons', requireAdmin, requireChangedAdminPassword, (_req, res) => {
+  db.all(`SELECT * FROM lessons ORDER BY language, lesson_number`, [], (err, lessons) => {
+    if (err) return res.status(500).json({ error: 'Unable to load lessons' });
+    res.json({ lessons });
+  });
+});
+
+function saveLessonTasks(lessonId, tasks, callback) {
+  const statement = db.prepare(
+    `INSERT INTO tasks (lesson_id, task_number, type, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  );
+  let firstError = null;
+  tasks.forEach((task, index) => {
+    statement.run(
+      lessonId,
+      index + 1,
+      task.type || 'multiple_choice',
+      task.question,
+      JSON.stringify(task.options || []),
+      task.correct_answer,
+      task.explanation || '',
+      (err) => { if (err && !firstError) firstError = err; }
+    );
+  });
+  statement.finalize((err) => callback(err || firstError));
+}
+
+app.post('/api/admin/lessons', requireAdmin, requireChangedAdminPassword, (req, res) => {
+  const { language, lesson_number, title, subtitle, content, xp_reward, tasks } = req.body;
+  const validTasks = Array.isArray(tasks) && tasks.length > 0 && tasks.every((task) =>
+    typeof task.question === 'string' && task.question.trim() &&
+    typeof task.correct_answer === 'string' && task.correct_answer.trim() &&
+    Array.isArray(task.options)
+  );
+  if (!['Python', 'JavaScript'].includes(language) || !Number.isInteger(Number(lesson_number)) ||
+      Number(lesson_number) < 1 || !String(title || '').trim() || !validTasks) {
+    return res.status(400).json({ error: 'Enter lesson details and at least one valid task' });
+  }
+
+  db.run(
+    `INSERT INTO lessons (language, lesson_number, title, subtitle, content, xp_reward)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [language, Number(lesson_number), title.trim(), subtitle || '', content || '', Math.max(0, Number(xp_reward) || 0)],
+    function (err) {
+      if (err?.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ error: 'That lesson number already exists for this language' });
+      if (err) return res.status(500).json({ error: 'Unable to create lesson' });
+      const lessonId = this.lastID;
+      saveLessonTasks(lessonId, tasks, (taskError) => {
+        if (taskError) {
+          db.run(`DELETE FROM tasks WHERE lesson_id = ?`, [lessonId]);
+          db.run(`DELETE FROM lessons WHERE id = ?`, [lessonId]);
+          return res.status(500).json({ error: 'Unable to save lesson tasks' });
+        }
+        db.run(`UPDATE users SET total_lessons = total_lessons + 1 WHERE language = ?`, [language]);
+        res.status(201).json({ id: lessonId });
+      });
+    }
+  );
+});
+
+app.patch('/api/admin/lessons/:id', requireAdmin, requireChangedAdminPassword, (req, res) => {
+  const { title, subtitle, content, xp_reward } = req.body;
+  if (!String(title || '').trim()) return res.status(400).json({ error: 'Lesson title is required' });
+  db.run(
+    `UPDATE lessons SET title = ?, subtitle = ?, content = ?, xp_reward = ? WHERE id = ?`,
+    [title.trim(), subtitle || '', content || '', Math.max(0, Number(xp_reward) || 0), req.params.id],
+    function (err) {
+      if (err) return res.status(500).json({ error: 'Unable to update lesson' });
+      if (!this.changes) return res.status(404).json({ error: 'Lesson not found' });
+      res.json({ updated: true });
+    }
+  );
+});
+
+app.delete('/api/admin/lessons/:id', requireAdmin, requireChangedAdminPassword, (req, res) => {
+  db.run(`DELETE FROM tasks WHERE lesson_id = ?`, [req.params.id], (taskError) => {
+    if (taskError) return res.status(500).json({ error: 'Unable to remove lesson tasks' });
+    db.run(`DELETE FROM user_progress WHERE lesson_id = ?`, [req.params.id], function (progressError) {
+      if (progressError) return res.status(500).json({ error: 'Unable to remove lesson progress' });
+      db.run(`DELETE FROM lessons WHERE id = ?`, [req.params.id], function (deleteError) {
+        if (deleteError) return res.status(500).json({ error: 'Unable to delete lesson' });
+        if (!this.changes) return res.status(404).json({ error: 'Lesson not found' });
+        res.json({ deleted: true });
+      });
+    });
+  });
+});
+
+const PORT = Number(process.env.PORT) || 5000;
+bootstrapAdmin(() => {
+  app.listen(PORT, () => {
+    console.log(`Backend запущен на http://localhost:${PORT}`);
+  });
 });

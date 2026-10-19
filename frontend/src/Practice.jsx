@@ -109,22 +109,7 @@ export default function Practice() {
           <h1 className="header-title">A little practice pays off</h1>
         </div>
 
-        {/* Language Tabs */}
-        <div className="tabs">
-          <NavLink
-            to="/practice"
-            end
-            className={({ isActive }) => `tab${isActive ? ' active' : ''}`}
-          >
-            Python
-          </NavLink>
-          <NavLink
-            to="/practice-js"
-            className={({ isActive }) => `tab${isActive ? ' active' : ''}`}
-          >
-            JavaScript
-          </NavLink>
-        </div>
+        
 
         {/* Description */}
         <p className="description">

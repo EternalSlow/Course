@@ -13,22 +13,32 @@ export function AuthProvider({ children }) {
     const username = localStorage.getItem('username');
 
     if (token && userId) {
-      setUser({ token, userId: Number(userId), username: username || '' });
+      setUser({
+        token,
+        userId: Number(userId),
+        username: username || '',
+        isAdmin: localStorage.getItem('isAdmin') === 'true',
+        mustChangePassword: localStorage.getItem('mustChangePassword') === 'true',
+      });
     }
     setLoading(false);
   }, []);
 
-  const login = ({ token, userId, username }) => {
+  const login = ({ token, userId, username, isAdmin = false, mustChangePassword = false }) => {
     localStorage.setItem('token', token);
     localStorage.setItem('userId', String(userId));
     localStorage.setItem('username', username || '');
-    setUser({ token, userId: Number(userId), username: username || '' });
+    localStorage.setItem('isAdmin', String(isAdmin));
+    localStorage.setItem('mustChangePassword', String(mustChangePassword));
+    setUser({ token, userId: Number(userId), username: username || '', isAdmin, mustChangePassword });
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
     localStorage.removeItem('username');
+    localStorage.removeItem('isAdmin');
+    localStorage.removeItem('mustChangePassword');
     setUser(null);
   };
 
