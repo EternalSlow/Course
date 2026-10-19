@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './style/style.css';
 import robot from './assets/robot.svg';
-
+import LessonComplete from './LessonComplete';
 
 // Fallback данные — работают БЕЗ сервера
 const FALLBACK_LESSON = {
+  id: 3,
+  number: 3,
   title: 'Conditions',
   subtitle: 'Make decisions in code',
   xp_reward: 50,
@@ -38,9 +40,12 @@ const FALLBACK_TASKS = [
   },
 ];
 
+const API_BASE = 'http://localhost:5000';
+
 export default function LessonTask() {
-  const { id } = useParams();
+  const { id } = useParams(); // номер урока из URL
   const navigate = useNavigate();
+  const userId = localStorage.getItem('userId');
 
   const [lesson, setLesson] = useState(FALLBACK_LESSON);
   const [tasks, setTasks] = useState(FALLBACK_TASKS);
@@ -48,44 +53,67 @@ export default function LessonTask() {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [completing, setCompleting] = useState(false); // загрузка завершения
   const [completed, setCompleted] = useState(false);
+  const [completeData, setCompleteData] = useState(null); // данные для экрана завершения
+  const [lessonStats, setLessonStats] = useState({
+    startTime: Date.now(),
+    correctAnswers: 0,
+    totalAnswers: 0,
+  });
 
   useEffect(() => {
-    console.log('📦 LessonTask mounted, id =', id);
+    console.log(' LessonTask mounted, id =', id, 'userId =', userId);
 
-    // Пытаемся загрузить с сервера, но fallback уже установлен
-    fetch(`http://localhost:5000/api/user/1/lesson/${id}/tasks`)
+    if (!userId) {
+      console.warn('⚠️ userId не найден в localStorage');
+      setLoading(false);
+      return;
+    }
+
+    fetch(`${API_BASE}/api/user/${userId}/lesson/${id}/tasks`)
       .then(res => res.json())
       .then(data => {
-        console.log('📡 Данные с сервера:', data);
+        console.log(' Данные с сервера:', data);
         if (data.lesson && data.tasks && data.tasks.length > 0) {
-          setLesson(data.lesson);
+          setLesson({
+            id: data.lesson.id,
+            number: data.lesson.number,
+            title: data.lesson.title,
+            subtitle: data.lesson.subtitle,
+            xp_reward: data.lesson.xp_reward,
+          });
           setTasks(data.tasks);
         } else {
-          console.warn('⚠️ Сервер вернул пустые данные, используем fallback');
+          console.warn('️ Сервер вернул пустые данные, используем fallback');
         }
       })
       .catch(err => {
-        console.warn('⚠️ Сервер недоступен, используем fallback данные');
+        console.warn('️ Сервер недоступен, используем fallback данные', err);
       })
       .finally(() => {
         setLoading(false);
         console.log('✅ Loading finished');
       });
-  }, [id]);
+  }, [id, userId]);
 
   const currentTask = tasks[currentTaskIndex];
   const totalTasks = tasks.length;
-  const progressPercent = ((currentTaskIndex) / totalTasks) * 100;
-
-  console.log(' currentTask:', currentTask);
-  console.log('📊 currentTaskIndex:', currentTaskIndex, 'totalTasks:', totalTasks);
+  const progressPercent = (currentTaskIndex / totalTasks) * 100;
 
   const handleCheck = () => {
     if (!selectedAnswer || !currentTask) return;
+
     const isCorrect = selectedAnswer === currentTask.correct_answer;
     console.log('✅ Проверка:', selectedAnswer, '===', currentTask.correct_answer, '→', isCorrect);
+
     setFeedback(isCorrect ? 'correct' : 'wrong');
+
+    setLessonStats(prev => ({
+      ...prev,
+      totalAnswers: prev.totalAnswers + 1,
+      correctAnswers: isCorrect ? prev.correctAnswers + 1 : prev.correctAnswers,
+    }));
   };
 
   const handleContinue = () => {
@@ -100,8 +128,98 @@ export default function LessonTask() {
       setSelectedAnswer(null);
       setFeedback(null);
     } else {
-      setCompleted(true);
+      finishLesson();
     }
+  };
+
+  // Завершение урока — вызов сервера и сбор данных для экрана
+  const finishLesson = async () => {
+    setCompleting(true);
+
+    const timeSpent = Math.floor((Date.now() - lessonStats.startTime) / 1000);
+    const minutes = Math.floor(timeSpent / 60);
+    const seconds = timeSpent % 60;
+    const timeFormatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    const accuracy =
+      lessonStats.totalAnswers > 0
+        ? Math.round((lessonStats.correctAnswers / lessonStats.totalAnswers) * 100)
+        : 0;
+
+    // 1. Сообщаем серверу о завершении урока
+    let nextLessonNumber = lesson.number + 1;
+    try {
+      const res = await fetch(`${API_BASE}/api/user/${userId}/complete-lesson`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonNumber: lesson.number }),
+      });
+      const data = await res.json();
+      if (res.ok && data.nextLesson) {
+        nextLessonNumber = data.nextLesson;
+      }
+    } catch (err) {
+      console.warn('⚠️ Не удалось завершить урок на сервере', err);
+    }
+
+    // 2. Загружаем данные следующего урока (для заголовка)
+    let nextLessonTitle = 'Next Lesson';
+    try {
+      const res = await fetch(`${API_BASE}/api/user/${userId}/lesson/${nextLessonNumber}`);
+      if (res.ok) {
+        const data = await res.json();
+        nextLessonTitle = data.title || `Lesson ${nextLessonNumber}`;
+      }
+    } catch (err) {
+      console.warn('⚠️ Не удалось загрузить следующий урок', err);
+    }
+
+    // 3. Загружаем обновлённые данные пользователя (XP, streak)
+    let userXP = 0;
+    let streak = 0;
+    try {
+      const res = await fetch(`${API_BASE}/api/user/${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        userXP = data.xp || 0;
+        streak = data.streak || 0;
+      }
+    } catch (err) {
+      console.warn('⚠️ Не удалось загрузить данные пользователя', err);
+    }
+
+    // 4. Загружаем daily goal (может вернуть 404 — используем fallback)
+    let dailyGoal = 50;
+    let dailyXP = 0;
+    try {
+      const res = await fetch(`${API_BASE}/api/user/${userId}/goal`);
+      if (res.ok) {
+        const data = await res.json();
+        dailyGoal = data.daily_goal || 50;
+        dailyXP = data.daily_xp || 0;
+      }
+    } catch (err) {
+      console.warn('⚠️ Goal endpoint недоступен, используем fallback', err);
+      dailyXP = parseInt(localStorage.getItem('dailyXP') || '30');
+    }
+
+    setCompleteData({
+      lessonTitle: lesson.title,
+      nextLessonTitle,
+      xpEarned: lesson.xp_reward || 30,
+      accuracy,
+      timeSpent: timeFormatted,
+      correctAnswers: lessonStats.correctAnswers,
+      totalAnswers: lessonStats.totalAnswers,
+      totalXP: userXP,
+      previousXP: userXP - (lesson.xp_reward || 30),
+      dailyXP,
+      dailyGoal,
+      streakDays: streak,
+    });
+
+    setCompleted(true);
+    setCompleting(false);
   };
 
   // Loading
@@ -115,19 +233,36 @@ export default function LessonTask() {
     );
   }
 
-  // Completed
-  if (completed) {
+  // Completing (идёт запрос к серверу)
+  if (completing) {
     return (
       <div className="lesson-task page-container">
-        <div className="app-container lesson-complete">
-          <div className="complete-icon">🎉</div>
-          <h1 className="complete-title">Lesson complete!</h1>
-          <p className="complete-subtitle">You earned {lesson.xp_reward} XP</p>
-          <button className="task-continue-btn correct" onClick={() => navigate('/lesson')}>
-            Continue
-          </button>
+        <div className="app-container">
+          <p style={{ textAlign: 'center', marginTop: 100 }}>Завершаем урок...</p>
         </div>
       </div>
+    );
+  }
+
+  // Completed — показываем красивый экран
+  if (completed && completeData) {
+    return (
+      <LessonComplete
+        lessonTitle={completeData.lessonTitle}
+        nextLessonTitle={completeData.nextLessonTitle}
+        xpEarned={completeData.xpEarned}
+        accuracy={completeData.accuracy}
+        timeSpent={completeData.timeSpent}
+        correctAnswers={completeData.correctAnswers}
+        totalAnswers={completeData.totalAnswers}
+        totalXP={completeData.totalXP}
+        previousXP={completeData.previousXP}
+        dailyXP={completeData.dailyXP}
+        dailyGoal={completeData.dailyGoal}
+        streakDays={completeData.streakDays}
+        onNext={() => navigate(`/lesson/${lesson.number + 1}`)}
+        onReview={() => navigate('/practice')}
+      />
     );
   }
 
@@ -145,7 +280,6 @@ export default function LessonTask() {
   return (
     <div className="lesson-task page-container">
       <div className="app-container">
-
         {/* ШАПКА */}
         <div className="task-header">
           <button className="close-btn" onClick={() => navigate('/lesson')}>
@@ -154,11 +288,9 @@ export default function LessonTask() {
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
-
           <div className="task-progress-track">
             <div className="task-progress-fill" style={{ width: `${progressPercent}%` }} />
           </div>
-
           <span className="task-progress-label">
             {currentTaskIndex + 1} / {totalTasks}
           </span>
@@ -167,7 +299,7 @@ export default function LessonTask() {
         {/* МАСКОТ */}
         <div className="mascot-section">
           <div className="mascot">
-            <img src={robot} width="80"height={80} ></img>
+            <img src={robot} width="80" height={80} alt="Robot" />
           </div>
           <div className="mascot-bubble">
             <p>{currentTask.explanation || "Let's practice!"}</p>
@@ -176,11 +308,9 @@ export default function LessonTask() {
 
         {/* КОД (если есть переносы в вопросе) */}
         {currentTask.question.includes('\n') ? (
-          <>
-            <div className="code-block">
-              <pre>{currentTask.question}</pre>
-            </div>
-          </>
+          <div className="code-block">
+            <pre>{currentTask.question}</pre>
+          </div>
         ) : (
           <h1 className="task-question-title">{currentTask.question}</h1>
         )}
@@ -228,29 +358,30 @@ export default function LessonTask() {
             )}
           </div>
         )}
-      <nav class="bottom-nav">
-      <div className={`task-footer ${feedback || ''}`}>
-          {!feedback ? (
-            <button
-              className="task-check-btn"
-              onClick={handleCheck}
-              disabled={!selectedAnswer}
-              type="button"
-            >
-              Check
-            </button>
-          ) : (
-            <button
-              className={`task-continue-btn ${feedback}`}
-              onClick={handleContinue}
-              type="button"
-            >
-              Continue
-            </button>
-          )}
-          
-      </div>
-      </nav>
+
+        {/* НАВИГАЦИЯ */}
+        <nav className="bottom-nav">
+          <div className={`task-footer ${feedback || ''}`}>
+            {!feedback ? (
+              <button
+                className="task-check-btn"
+                onClick={handleCheck}
+                disabled={!selectedAnswer}
+                type="button"
+              >
+                Check
+              </button>
+            ) : (
+              <button
+                className={`task-continue-btn ${feedback}`}
+                onClick={handleContinue}
+                type="button"
+              >
+                Continue
+              </button>
+            )}
+          </div>
+        </nav>
       </div>
     </div>
   );
