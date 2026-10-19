@@ -36,7 +36,7 @@ const Register = () => {
       login({
         token: data.token,
         userId: data.userId,
-        username,
+        username: data.username || username,
       });
       // ✅ localStorage не трогаем — это уже делает AuthContext.login()
 
@@ -64,6 +64,7 @@ const Register = () => {
           autoComplete="username"
           required
           minLength={3}
+          maxLength={32}
         />
         <input
           type="email"
@@ -72,6 +73,7 @@ const Register = () => {
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
           required
+          maxLength={254}
         />
         <input
           type="password"

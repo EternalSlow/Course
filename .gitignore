@@ -1,1 +1,11 @@
 TODO
+frontend/node_modules
+frontend/dist
+frontend/icon
+frontend/package*
+frontend/.oxlintrc.json
+frontend/vite.config.js
+backend/node_modules
+backend/uploads
+backend/database.sqlite
+backend/package*

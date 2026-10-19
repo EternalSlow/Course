@@ -361,7 +361,15 @@ app.get('/api/user/:id/lesson/:number/tasks', (req, res) => {
 });
 
 app.post('/api/register', async (req, res) => {
-  const { username, email, password } = req.body;
+  const username = sanitizePlainText(req.body.username);
+  const email = sanitizePlainText(req.body.email);
+  const { password } = req.body;
+  if (username.length < 3 || username.length > 32 ||
+      email.length > 254 || !email.includes('@') ||
+      typeof password !== 'string' || password.length < 6) {
+    return res.status(400).json({ error: 'Enter a name of 3 to 32 characters, a valid email, and a password of at least 6 characters' });
+  }
+
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     db.run(
@@ -372,7 +380,7 @@ app.post('/api/register', async (req, res) => {
           return res.status(400).json({ error: 'Пользователь с таким email или именем уже существует' });
         }
         const token = jwt.sign({ id: this.lastID, username }, SECRET_KEY, { expiresIn: '7d' });
-        res.status(201).json({ message: 'Регистрация успешна', token, userId: this.lastID });
+        res.status(201).json({ message: 'Регистрация успешна', token, userId: this.lastID, username });
       }
     );
   } catch (error) {
@@ -394,7 +402,7 @@ app.post('/api/user/:id/language', (req, res) => {
 });
 
 app.patch('/api/user/:id/profile', (req, res) => {
-  const username = typeof req.body.username === 'string' ? req.body.username.trim() : '';
+  const username = sanitizePlainText(req.body.username);
   if (username.length < 3 || username.length > 32) {
     return res.status(400).json({ error: 'Name must contain 3 to 32 characters' });
   }
@@ -415,7 +423,7 @@ app.patch('/api/user/:id/profile', (req, res) => {
 
 app.get('/api/league', (_req, res) => {
   db.all(
-    `SELECT id, username, xp, avatar FROM users ORDER BY xp DESC, id ASC`,
+    `SELECT id, username, xp, avatar FROM users WHERE is_admin = 0 ORDER BY xp DESC, id ASC`,
     [],
     (err, learners) => {
       if (err) {
@@ -435,9 +443,10 @@ app.get('/api/user/:id', (req, res) => {
   db.get(
         `SELECT id, username, email, language, current_lesson, total_lessons,
           xp, streak,
-          (SELECT COUNT(*) + 1 FROM users AS ranked_users WHERE ranked_users.xp > users.xp) AS rank,
+          (SELECT COUNT(*) + 1 FROM users AS ranked_users
+           WHERE ranked_users.is_admin = 0 AND ranked_users.xp > users.xp) AS rank,
           avatar
-     FROM users WHERE id = ?`,
+     FROM users WHERE id = ? AND is_admin = 0`,
     [id],
     (err, row) => {
       if (err) {
@@ -473,11 +482,24 @@ app.post('/api/user/:id/avatar', upload.single('avatar'), (req, res) => {
 
 app.get('/api/user/:id/lessons', (req, res) => {
   const { id } = req.params;
-  db.get(`SELECT language FROM users WHERE id = ?`, [id], (err, user) => {
+  db.get(`SELECT id, language, current_lesson FROM users WHERE id = ?`, [id], (err, user) => {
     if (err || !user) return res.status(404).json({ error: 'Пользователь не найден' });
     db.all(
-      `SELECT * FROM lessons WHERE language = ? ORDER BY lesson_number`,
-      [user.language],
+      `SELECT lessons.id, lessons.language, lessons.lesson_number, lessons.title,
+         lessons.subtitle, lessons.content, lessons.xp_reward,
+         CASE
+           WHEN EXISTS (
+             SELECT 1 FROM user_progress
+             WHERE user_progress.user_id = ? AND user_progress.lesson_id = lessons.id
+               AND user_progress.completed = 1
+           ) THEN 'completed'
+           WHEN lessons.lesson_number = ? THEN 'active'
+           ELSE 'locked'
+         END AS status
+       FROM lessons
+       WHERE language = ?
+       ORDER BY lesson_number`,
+      [user.id, user.current_lesson, user.language],
       (err, lessons) => {
         if (err) return res.status(500).json({ error: 'Ошибка сервера' });
         res.json({ lessons, language: user.language });
@@ -530,7 +552,8 @@ app.post('/api/user/:id/complete-lesson', (req, res) => {
           [userId, lesson.id],
           function (progressError) {
             if (progressError) return res.status(500).json({ error: 'Unable to record lesson progress' });
-            const xpEarned = this.changes ? Number(lesson.xp_reward) || 0 : 0;
+            const alreadyCompleted = this.changes === 0;
+            const xpEarned = alreadyCompleted ? 0 : Number(lesson.xp_reward) || 0;
             const nextNumber = lessonNumber + 1;
 
             const finishResponse = (totalXP) => res.json({
@@ -540,46 +563,22 @@ app.post('/api/user/:id/complete-lesson', (req, res) => {
               xpEarned,
               previousXP: user.xp,
               totalXP,
-              alreadyCompleted: xpEarned === 0,
+              alreadyCompleted,
             });
 
-            const updateProgression = () => {
-              db.run(
-                `UPDATE lessons SET status = 'completed' WHERE id = ?`,
-                [lesson.id],
-                (completeError) => {
-                  if (completeError) return res.status(500).json({ error: 'Unable to complete lesson' });
-                  db.run(
-                    `UPDATE lessons SET status = 'active'
-                     WHERE language = ? AND lesson_number = ? AND status = 'locked'`,
-                    [user.language, nextNumber],
-                    (unlockError) => {
-                      if (unlockError) return res.status(500).json({ error: 'Unable to unlock next lesson' });
-                      db.get(`SELECT xp FROM users WHERE id = ?`, [userId], (xpError, updatedUser) => {
-                        if (xpError || !updatedUser) return res.status(500).json({ error: 'Unable to load updated XP' });
-                        finishResponse(updatedUser.xp);
-                      });
-                    }
-                  );
-                }
-              );
-            };
-
-            if (xpEarned > 0) {
-              db.run(
-                `UPDATE users SET xp = xp + ?, current_lesson = ? WHERE id = ?`,
-                [xpEarned, nextNumber, userId],
-                (xpError) => {
-                  if (xpError) return res.status(500).json({ error: 'Unable to award XP' });
-                  updateProgression();
-                }
-              );
-            } else {
-              db.run(`UPDATE users SET current_lesson = ? WHERE id = ?`, [nextNumber, userId], (updateError) => {
+            db.run(
+              `UPDATE users
+               SET xp = xp + ?, current_lesson = MAX(current_lesson, ?)
+               WHERE id = ?`,
+              [xpEarned, nextNumber, userId],
+              (updateError) => {
                 if (updateError) return res.status(500).json({ error: 'Unable to update lesson progress' });
-                updateProgression();
-              });
-            }
+                db.get(`SELECT xp FROM users WHERE id = ?`, [userId], (xpError, updatedUser) => {
+                  if (xpError || !updatedUser) return res.status(500).json({ error: 'Unable to load updated XP' });
+                  finishResponse(updatedUser.xp);
+                });
+              }
+            );
           }
         );
       }
@@ -666,22 +665,24 @@ app.get('/api/admin/users', requireAdmin, requireChangedAdminPassword, (_req, re
 });
 
 app.post('/api/admin/users', requireAdmin, requireChangedAdminPassword, async (req, res) => {
-  const { username, email, password } = req.body;
-  if (typeof username !== 'string' || username.trim().length < 3 ||
-      typeof email !== 'string' || !email.includes('@') ||
+  const username = sanitizePlainText(req.body.username);
+  const email = sanitizePlainText(req.body.email);
+  const { password } = req.body;
+  if (username.length < 3 || username.length > 32 ||
+      email.length > 254 || !email.includes('@') ||
       typeof password !== 'string' || password.length < 8) {
-    return res.status(400).json({ error: 'Enter a name, valid email, and password of at least 8 characters' });
+    return res.status(400).json({ error: 'Enter a name of 3 to 32 characters, a valid email, and a password of at least 8 characters' });
   }
 
   try {
     const passwordHash = await bcrypt.hash(password, 10);
     db.run(
       `INSERT INTO users (username, email, password) VALUES (?, ?, ?)`,
-      [username.trim(), email.trim(), passwordHash],
+      [username, email, passwordHash],
       function (err) {
         if (err?.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ error: 'Name or email is already in use' });
         if (err) return res.status(500).json({ error: 'Unable to create user' });
-        res.status(201).json({ id: this.lastID, username: username.trim(), email: email.trim() });
+        res.status(201).json({ id: this.lastID, username, email });
       }
     );
   } catch {
@@ -690,7 +691,7 @@ app.post('/api/admin/users', requireAdmin, requireChangedAdminPassword, async (r
 });
 
 app.patch('/api/admin/users/:id', requireAdmin, requireChangedAdminPassword, (req, res) => {
-  const username = typeof req.body.username === 'string' ? req.body.username.trim() : '';
+  const username = sanitizePlainText(req.body.username);
   if (username.length < 3 || username.length > 32) {
     return res.status(400).json({ error: 'Name must contain 3 to 32 characters' });
   }
@@ -778,27 +779,80 @@ function saveLessonTasks(lessonId, tasks, callback) {
   statement.finalize((err) => callback(err || firstError));
 }
 
+const LESSON_TEXT_LIMITS = {
+  title: 100,
+  subtitle: 180,
+  content: 5000,
+  question: 1000,
+  correctAnswer: 300,
+  option: 250,
+  explanation: 500,
+};
+
+function sanitizePlainText(value, multiline = false) {
+  if (typeof value !== 'string') return '';
+  const cleaned = value
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return multiline ? cleaned : cleaned.replace(/\s+/g, ' ');
+}
+
+function isTextWithinLimit(value, limit) {
+  return typeof value === 'string' && value.length <= limit;
+}
+
+function isOptionalText(value) {
+  return value == null || typeof value === 'string';
+}
+
 app.post('/api/admin/lessons', requireAdmin, requireChangedAdminPassword, (req, res) => {
   const { language, lesson_number, title, subtitle, content, xp_reward, tasks } = req.body;
-  const validTasks = Array.isArray(tasks) && tasks.length > 0 && tasks.every((task) =>
-    typeof task.question === 'string' && task.question.trim() &&
-    typeof task.correct_answer === 'string' && task.correct_answer.trim() &&
-    Array.isArray(task.options)
+  const cleanTitle = sanitizePlainText(title);
+  const cleanSubtitle = sanitizePlainText(subtitle);
+  const cleanContent = sanitizePlainText(content, true);
+  const validTaskInputs = Array.isArray(tasks) && tasks.every((task) =>
+    task && typeof task === 'object' && !Array.isArray(task) &&
+    typeof task.question === 'string' && typeof task.correct_answer === 'string' &&
+    isOptionalText(task.type) && isOptionalText(task.explanation) &&
+    Array.isArray(task.options) && task.options.every((option) => typeof option === 'string')
   );
-  if (!['Python', 'JavaScript'].includes(language) || !Number.isInteger(Number(lesson_number)) ||
-      Number(lesson_number) < 1 || !String(title || '').trim() || !validTasks) {
-    return res.status(400).json({ error: 'Enter lesson details and at least one valid task' });
+  const cleanTasks = Array.isArray(tasks) ? tasks.map((task) => ({
+    type: typeof task?.type === 'string' ? sanitizePlainText(task.type) : 'multiple_choice',
+    question: sanitizePlainText(task?.question, true),
+    correct_answer: sanitizePlainText(task?.correct_answer),
+    explanation: sanitizePlainText(task?.explanation, true),
+    options: Array.isArray(task?.options) ? task.options.map((option) => sanitizePlainText(option, true)) : [],
+  })) : [];
+  const xpReward = Number(xp_reward ?? 0);
+  const validTasks = validTaskInputs && cleanTasks.length > 0 && cleanTasks.length <= 30 && cleanTasks.every((task) =>
+    isTextWithinLimit(task.question, LESSON_TEXT_LIMITS.question) && task.question &&
+    isTextWithinLimit(task.correct_answer, LESSON_TEXT_LIMITS.correctAnswer) && task.correct_answer &&
+    isTextWithinLimit(task.explanation, LESSON_TEXT_LIMITS.explanation) &&
+    task.options.length >= 2 && task.options.length <= 6 &&
+    task.options.every((option) => isTextWithinLimit(option, LESSON_TEXT_LIMITS.option) && option) &&
+    task.options.includes(task.correct_answer)
+  );
+  if (typeof title !== 'string' || !isOptionalText(subtitle) || !isOptionalText(content) ||
+      !['Python', 'JavaScript'].includes(language) || !Number.isSafeInteger(Number(lesson_number)) ||
+      Number(lesson_number) < 1 || !cleanTitle || !isTextWithinLimit(cleanTitle, LESSON_TEXT_LIMITS.title) ||
+      !isTextWithinLimit(cleanSubtitle, LESSON_TEXT_LIMITS.subtitle) ||
+      !isTextWithinLimit(cleanContent, LESSON_TEXT_LIMITS.content) ||
+      !Number.isSafeInteger(xpReward) || xpReward < 0 || xpReward > 10000 || !validTasks) {
+    return res.status(400).json({ error: 'Check lesson text limits and add valid tasks with 2 to 6 options, including the correct answer' });
   }
 
   db.run(
     `INSERT INTO lessons (language, lesson_number, title, subtitle, content, xp_reward)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [language, Number(lesson_number), title.trim(), subtitle || '', content || '', Math.max(0, Number(xp_reward) || 0)],
+    [language, Number(lesson_number), cleanTitle, cleanSubtitle, cleanContent, xpReward],
     function (err) {
       if (err?.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ error: 'That lesson number already exists for this language' });
       if (err) return res.status(500).json({ error: 'Unable to create lesson' });
       const lessonId = this.lastID;
-      saveLessonTasks(lessonId, tasks, (taskError) => {
+      saveLessonTasks(lessonId, cleanTasks, (taskError) => {
         if (taskError) {
           db.run(`DELETE FROM tasks WHERE lesson_id = ?`, [lessonId]);
           db.run(`DELETE FROM lessons WHERE id = ?`, [lessonId]);
@@ -813,10 +867,20 @@ app.post('/api/admin/lessons', requireAdmin, requireChangedAdminPassword, (req, 
 
 app.patch('/api/admin/lessons/:id', requireAdmin, requireChangedAdminPassword, (req, res) => {
   const { title, subtitle, content, xp_reward } = req.body;
-  if (!String(title || '').trim()) return res.status(400).json({ error: 'Lesson title is required' });
+  const cleanTitle = sanitizePlainText(title);
+  const cleanSubtitle = sanitizePlainText(subtitle);
+  const cleanContent = sanitizePlainText(content, true);
+  const xpReward = Number(xp_reward ?? 0);
+  if (typeof title !== 'string' || !isOptionalText(subtitle) || !isOptionalText(content) ||
+      !cleanTitle || !isTextWithinLimit(cleanTitle, LESSON_TEXT_LIMITS.title) ||
+      !isTextWithinLimit(cleanSubtitle, LESSON_TEXT_LIMITS.subtitle) ||
+      !isTextWithinLimit(cleanContent, LESSON_TEXT_LIMITS.content) ||
+      !Number.isSafeInteger(xpReward) || xpReward < 0 || xpReward > 10000) {
+    return res.status(400).json({ error: 'Enter valid lesson details within the allowed limits' });
+  }
   db.run(
     `UPDATE lessons SET title = ?, subtitle = ?, content = ?, xp_reward = ? WHERE id = ?`,
-    [title.trim(), subtitle || '', content || '', Math.max(0, Number(xp_reward) || 0), req.params.id],
+    [cleanTitle, cleanSubtitle, cleanContent, xpReward, req.params.id],
     function (err) {
       if (err) return res.status(500).json({ error: 'Unable to update lesson' });
       if (!this.changes) return res.status(404).json({ error: 'Lesson not found' });

@@ -85,6 +85,8 @@ export default function Lesson() {
     if (!user?.userId) return;
     setLoading(true);
     setError(null);
+    setSteps([]);
+    setLanguage('Python');
 
     try {
       const res = await fetch(`${API_BASE}/user/${user.userId}/lessons`, { signal });

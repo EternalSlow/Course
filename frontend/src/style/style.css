@@ -307,6 +307,7 @@ body.admin { padding: 0; }
 .section-tag,
 .course-tag,
 .greeting {
+  overflow-wrap: anywhere;
   font-size: 13px;
   font-weight: 700;
   color: var(--color-muted);
@@ -321,6 +322,7 @@ body.admin { padding: 0; }
    ============================================================ */
 /* Row card: icon + info + trailing arrow/action */
 .row-card {
+  width: 100%;
   background: #fff;
   border-radius: 16px;
   padding: 18px 20px;
@@ -331,6 +333,8 @@ body.admin { padding: 0; }
   border: 1.5px solid var(--color-card-border);
   transition: border-color 0.2s;
   margin-bottom: 12px;
+  font: inherit;
+  text-align: left;
 }
 .row-card:hover { border-color: #d0d5e0; }
 
@@ -562,6 +566,9 @@ body.home .am-badge {
   font-size: 14px;
   font-weight: 700;
   color: var(--color-primary-ink);
+  object-fit: cover;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 /* Home stat tint */
@@ -791,6 +798,7 @@ body.journey .node-info {
   justify-content: center;
 }
 body.journey .node-title {
+  overflow-wrap: anywhere;
   font-size: 19px;
   font-weight: 700;
   color: #3c3c3c;
@@ -800,6 +808,7 @@ body.journey .node-button.locked ~ .node-info .node-title {
   color: var(--color-muted-light);
 }
 body.journey .node-subtitle {
+  overflow-wrap: anywhere;
   font-size: 13px;
   font-weight: 500;
   color: var(--color-muted-light);
@@ -894,12 +903,14 @@ body.profile .profile-avatar {
 }
 body.profile .profile-details { flex: 1; min-width: 0; }
 body.profile .profile-name {
+  overflow-wrap: anywhere;
   font-size: 22px;
   font-weight: 700;
   color: var(--color-text);
   margin-bottom: 2px;
 }
 body.profile .profile-username {
+  overflow-wrap: anywhere;
   font-size: 14px;
   color: var(--color-muted);
   margin-bottom: 2px;
@@ -1173,6 +1184,7 @@ body.league .podium-card.second .podium-avatar { color: var(--color-primary-ink)
 body.league .podium-card.third .podium-avatar { color: var(--color-purple); }
 
 body.league .podium-name {
+  overflow-wrap: anywhere;
   font-size: 17px;
   font-weight: 700;
   color: var(--color-text-strong);
@@ -1252,6 +1264,7 @@ body.league .lb-avatar {
 }
 body.league .lb-info { flex: 1; min-width: 0; }
 body.league .lb-name {
+  overflow-wrap: anywhere;
   font-size: 16px;
   font-weight: 700;
   color: var(--color-text-strong);
@@ -1582,6 +1595,9 @@ body.league .leaderboard-item.highlight .lb-xp { color: var(--color-green-dark);
 }
 
 .mascot-bubble {
+  min-width: 0;
+  max-height: 120px;
+  overflow-y: auto;
   background: #f7f7f7;
   border-radius: 16px;
   padding: 12px 16px;
@@ -1604,10 +1620,15 @@ body.league .leaderboard-item.highlight .lb-xp { color: var(--color-green-dark);
 
 .mascot-bubble p {
   margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 /* ===== ЗАГОЛОВОК ЗАДАНИЯ ===== */
 .task-question-title {
+  max-height: 6em;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
   font-size: 22px;
   font-weight: 800;
   color: #3c3c3c;
@@ -1617,11 +1638,12 @@ body.league .leaderboard-item.highlight .lb-xp { color: var(--color-green-dark);
 
 /* ===== БЛОК КОДА ===== */
 .code-block {
+  max-height: 240px;
   background: #2d2d2d;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 24px;
-  overflow-x: auto;
+  overflow: auto;
 }
 
 .code-block pre {
@@ -1631,6 +1653,7 @@ body.league .leaderboard-item.highlight .lb-xp { color: var(--color-green-dark);
   font-size: 14px;
   line-height: 1.6;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* ===== ВАРИАНТЫ ОТВЕТОВ ===== */
@@ -1656,6 +1679,7 @@ body.league .leaderboard-item.highlight .lb-xp { color: var(--color-green-dark);
   font-family: inherit;
   font-size: 16px;
   color: #3c3c3c;
+  min-width: 0;
 }
 
 .answer-option:hover:not(:disabled) {
@@ -1692,6 +1716,10 @@ body.league .leaderboard-item.highlight .lb-xp { color: var(--color-green-dark);
 .option-text {
   font-weight: 600;
   flex: 1;
+  min-width: 0;
+  max-height: 4.8em;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
 }
 
 /* ===== ОБРАТНАЯ СВЯЗЬ ===== */
@@ -1742,6 +1770,9 @@ body.league .leaderboard-item.highlight .lb-xp { color: var(--color-green-dark);
 }
 
 .feedback-explanation {
+  max-height: 120px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
   margin: 8px 0 0 0;
   font-size: 14px;
   color: #4b4b4b;

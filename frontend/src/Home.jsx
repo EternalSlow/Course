@@ -1,7 +1,7 @@
 import './style/style.css';
-import { NavLink } from 'react-router-dom';
-import React, { useEffect, useState } from 'react';   // ✅ добавили useState
-import { useAuth } from './AuthContext';              // ✅ добавили useAuth
+import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from './AuthContext';
 import robot from './assets/robot.svg';
 
 const NavIcons = {
@@ -52,7 +52,14 @@ const navItems = [
 
 export default function Home() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState(null);
+  const navigate = useNavigate();
+  const userId = user?.userId;
+  const [profileResult, setProfileResult] = useState(null);
+  const [profileErrorResult, setProfileErrorResult] = useState(null);
+  const profile = profileResult?.userId === userId ? profileResult.data : null;
+  const profileError = profileErrorResult?.userId === userId ? profileErrorResult.message : '';
+  const [courseResult, setCourseResult] = useState(null);
+  const course = courseResult?.userId === userId ? courseResult.data : null;
 
   useEffect(() => {
     document.body.classList.add('home');
@@ -60,20 +67,60 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!user?.userId) return;
-    fetch(`http://localhost:5000/api/user/${user.userId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setProfile)
-      .catch(() => {});
-  }, [user]);
+    if (!userId) return;
+
+    const controller = new AbortController();
+    fetch(`http://localhost:5000/api/user/${userId}`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Unable to load profile (${response.status})`);
+        return response.json();
+      })
+      .then((data) => setProfileResult({ userId, data }))
+      .catch((error) => {
+        if (error.name !== 'AbortError') {
+          console.error('Unable to load profile:', error);
+          setProfileErrorResult({
+            userId,
+            message: 'Your profile could not be loaded.',
+          });
+        }
+      });
+
+    return () => controller.abort();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const controller = new AbortController();
+    fetch(`http://localhost:5000/api/user/${userId}/lessons`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Unable to load lessons (${response.status})`);
+        return response.json();
+      })
+      .then((data) => {
+        if (!Array.isArray(data.lessons)) throw new Error('Invalid lesson list');
+        setCourseResult({ userId, data });
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') console.error('Unable to load lessons:', error);
+      });
+
+    return () => controller.abort();
+  }, [userId]);
 
   const displayName = profile?.username || user?.username || 'friend';
   const firstName = displayName.split(' ')[0];
   const initials = firstName.slice(0, 2).toUpperCase();
   const streak   = profile?.streak   ?? 0;
   const totalXP  = profile?.xp       ?? 0;
-  const curLesson = profile?.current_lesson ?? 1;
-  const totalLessons = profile?.total_lessons ?? 6;
+  const totalLessons = course?.lessons?.length || profile?.total_lessons || 6;
+  const activeLesson = course?.lessons?.find((lesson) => lesson.status === 'active') ||
+    course?.lessons?.find((lesson) => lesson.lesson_number === profile?.current_lesson) ||
+    course?.lessons?.at(-1);
+  const curLesson = activeLesson?.lesson_number ?? Math.min(profile?.current_lesson ?? 1, totalLessons);
+  const courseLanguage = course?.language || profile?.language || 'Python';
+  const continueLesson = Math.min(curLesson, totalLessons || curLesson || 1);
 
   // Цель на сегодня — отдельный запрос (или добавь в /api/user/:id)
   const [goal, setGoal] = useState(null);
@@ -102,12 +149,22 @@ export default function Home() {
             src={`http://localhost:5000${profile.avatar}`}
             alt={firstName}
             className="am-badge"
-            style={{ objectFit: 'cover', borderRadius: '50%' }}
+            onError={() => {
+              setProfileResult((current) => current?.userId === userId
+                ? { ...current, data: { ...current.data, avatar: null } }
+                : current);
+              setProfileErrorResult({
+                userId,
+                message: 'Your profile picture could not be loaded.',
+              });
+            }}
           />
         ) : (
           <div className="am-badge">{initials}</div>
         )}
         </div>
+
+        {profileError && <p className="error-banner" role="alert">{profileError}</p>}
 
         {/* Stats Row */}
         <div className="stats-row">
@@ -150,22 +207,22 @@ export default function Home() {
         {/* Lesson Card */}
         <div className="lesson-card">
           <div className="lesson-top-row">
-            <span className="lesson-tag">Python · Beginner</span>
+            <span className="lesson-tag">{courseLanguage} · Beginner</span>
             <span className="lesson-progress-text">{curLesson} / {totalLessons} topics</span>
           </div>
           <div className="lesson-content-row">
             <div className="lesson-info">
-              <h2 className="lesson-title">Make a decision</h2>
-              <p className="lesson-subtitle">Conditions · Lesson 1 of 3</p>
+              <h2 className="lesson-title">{activeLesson?.title || 'Make a decision'}</h2>
+              <p className="lesson-subtitle">{activeLesson?.subtitle || `Lesson ${curLesson} of ${totalLessons}`}</p>
             </div>
             <div className="lesson-robot">
               <img src={robot} width={72} height={72}/>
             </div>
           </div>
           <div className="progress-bar-bg lesson-progress-bar-bg">
-            <div className="progress-bar-fill lesson-progress-bar-fill" style={{width: `${(curLesson / totalLessons) * 100}%` }}/>
+            <div className="progress-bar-fill lesson-progress-bar-fill" style={{width: `${Math.min(100, (curLesson / totalLessons) * 100)}%` }}/>
           </div>
-          <button type="button" className="btn-primary green">
+          <button type="button" className="btn-primary green" onClick={() => navigate(`/task/${continueLesson}`)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
@@ -174,7 +231,7 @@ export default function Home() {
         </div>
 
         {/* Review Card */}
-        <div className="row-card">
+        <button type="button" className="row-card" onClick={() => navigate('/practice')}>
           <div className="row-card-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="#5c6bc0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="23 4 23 10 17 10" />
@@ -190,7 +247,7 @@ export default function Home() {
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </div>
-        </div>
+        </button>
 
         {/* Bottom Navigation */}
         <nav className="bottom-nav">

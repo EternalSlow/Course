@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 import './style/style.css';
 import robot from './assets/robot.svg';
 import LessonComplete from './LessonComplete';
@@ -45,7 +46,8 @@ const API_BASE = 'http://localhost:5000';
 export default function LessonTask() {
   const { id } = useParams(); // номер урока из URL
   const navigate = useNavigate();
-  const userId = localStorage.getItem('userId');
+  const { user } = useAuth();
+  const userId = user?.userId;
 
   const [lesson, setLesson] = useState(FALLBACK_LESSON);
   const [tasks, setTasks] = useState(FALLBACK_TASKS);
@@ -63,19 +65,34 @@ export default function LessonTask() {
   });
 
   useEffect(() => {
-    console.log(' LessonTask mounted, id =', id, 'userId =', userId);
+    const controller = new AbortController();
+    setLoading(true);
+    setLesson(FALLBACK_LESSON);
+    setTasks(FALLBACK_TASKS);
+    setCurrentTaskIndex(0);
+    setSelectedAnswer(null);
+    setFeedback(null);
+    setCompleting(false);
+    setCompleted(false);
+    setCompleteData(null);
+    setLessonStats({
+      startTime: Date.now(),
+      correctAnswers: 0,
+      totalAnswers: 0,
+    });
 
     if (!userId) {
-      console.warn('⚠️ userId не найден в localStorage');
       setLoading(false);
-      return;
+      return () => controller.abort();
     }
 
-    fetch(`${API_BASE}/api/user/${userId}/lesson/${id}/tasks`)
-      .then(res => res.json())
+    fetch(`${API_BASE}/api/user/${userId}/lesson/${id}/tasks`, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Unable to load lesson tasks (${res.status})`);
+        return res.json();
+      })
       .then(data => {
-        console.log(' Данные с сервера:', data);
-        if (data.lesson && data.tasks && data.tasks.length > 0) {
+        if (data.lesson && Array.isArray(data.tasks) && data.tasks.length > 0) {
           setLesson({
             id: data.lesson.id,
             number: data.lesson.number,
@@ -85,16 +102,18 @@ export default function LessonTask() {
           });
           setTasks(data.tasks);
         } else {
-          console.warn('️ Сервер вернул пустые данные, используем fallback');
+          console.warn('Server returned no lesson tasks. Using fallback data.');
         }
       })
       .catch(err => {
-        console.warn('️ Сервер недоступен, используем fallback данные', err);
+        if (!controller.signal.aborted) {
+          console.warn('Unable to load lesson tasks. Using fallback data.', err);
+        }
       })
       .finally(() => {
-        setLoading(false);
-        console.log('✅ Loading finished');
+        if (!controller.signal.aborted) setLoading(false);
       });
+    return () => controller.abort();
   }, [id, userId]);
 
   const currentTask = tasks[currentTaskIndex];

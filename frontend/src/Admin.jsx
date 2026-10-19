@@ -233,8 +233,8 @@ export default function Admin() {
             <section className="admin-section">
               <h2>Users</h2>
               <form className="admin-form" onSubmit={handleCreateUser}>
-                <input placeholder="Name" value={userForm.username} onChange={(event) => setUserForm({ ...userForm, username: event.target.value })} minLength={3} required />
-                <input type="email" placeholder="Email" value={userForm.email} onChange={(event) => setUserForm({ ...userForm, email: event.target.value })} required />
+                <input placeholder="Name" value={userForm.username} onChange={(event) => setUserForm({ ...userForm, username: event.target.value })} minLength={3} maxLength={32} required />
+                <input type="email" placeholder="Email" value={userForm.email} onChange={(event) => setUserForm({ ...userForm, email: event.target.value })} maxLength={254} required />
                 <input type="password" placeholder="Temporary password" value={userForm.password} onChange={(event) => setUserForm({ ...userForm, password: event.target.value })} minLength={8} required />
                 <button className="btn-primary green" type="submit">Create user</button>
               </form>
@@ -265,21 +265,21 @@ export default function Admin() {
                   </select>
                   <input type="number" min="1" placeholder="Lesson number" value={lessonForm.lesson_number} onChange={(event) => setLessonForm({ ...lessonForm, lesson_number: Number(event.target.value) })} disabled={Boolean(editingLessonId)} required />
                 </div>
-                <input placeholder="Lesson title" value={lessonForm.title} onChange={(event) => setLessonForm({ ...lessonForm, title: event.target.value })} required />
-                <input placeholder="Subtitle" value={lessonForm.subtitle} onChange={(event) => setLessonForm({ ...lessonForm, subtitle: event.target.value })} />
-                <textarea placeholder="Lesson content" value={lessonForm.content} onChange={(event) => setLessonForm({ ...lessonForm, content: event.target.value })} />
+                <input placeholder="Lesson title" value={lessonForm.title} onChange={(event) => setLessonForm({ ...lessonForm, title: event.target.value })} maxLength={100} required />
+                <input placeholder="Subtitle" value={lessonForm.subtitle} onChange={(event) => setLessonForm({ ...lessonForm, subtitle: event.target.value })} maxLength={180} />
+                <textarea placeholder="Lesson content" value={lessonForm.content} onChange={(event) => setLessonForm({ ...lessonForm, content: event.target.value })} maxLength={5000} />
                 <label className="admin-inline-field">XP reward<input type="number" min="0" value={lessonForm.xp_reward} onChange={(event) => setLessonForm({ ...lessonForm, xp_reward: Number(event.target.value) })} /></label>
                 {!editingLessonId && tasks.map((task, index) => (
                   <div className="admin-task" key={index}>
                     <h3>Task {index + 1}</h3>
-                    <textarea placeholder="Question" value={task.question} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, question: event.target.value } : item))} required />
-                    <input placeholder="Options, separated by commas" value={task.options} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, options: event.target.value } : item))} required />
-                    <input placeholder="Correct answer" value={task.correct_answer} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, correct_answer: event.target.value } : item))} required />
-                    <input placeholder="Explanation" value={task.explanation} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, explanation: event.target.value } : item))} />
+                    <textarea placeholder="Question" value={task.question} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, question: event.target.value } : item))} maxLength={1000} required />
+                    <input placeholder="Options, separated by commas (2 to 6 options)" value={task.options} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, options: event.target.value } : item))} maxLength={1540} required />
+                    <input placeholder="Correct answer" value={task.correct_answer} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, correct_answer: event.target.value } : item))} maxLength={300} required />
+                    <input placeholder="Explanation" value={task.explanation} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, explanation: event.target.value } : item))} maxLength={500} />
                     {tasks.length > 1 && <button type="button" onClick={() => setTasks(tasks.filter((_, itemIndex) => itemIndex !== index))}>Remove task</button>}
                   </div>
                 ))}
-                {!editingLessonId && <button type="button" className="admin-secondary" onClick={() => setTasks([...tasks, emptyTask()])}>Add task</button>}
+                {!editingLessonId && <button type="button" className="admin-secondary" onClick={() => setTasks([...tasks, emptyTask()])} disabled={tasks.length >= 30}>Add task</button>}
                 <button className="btn-primary green" type="submit">{editingLessonId ? 'Save lesson' : 'Create lesson'}</button>
                 {editingLessonId && <button type="button" className="admin-secondary" onClick={() => { setEditingLessonId(null); setLessonForm({ language: 'Python', lesson_number: '', title: '', subtitle: '', content: '', xp_reward: 50 }); }}>Cancel</button>}
               </form>
