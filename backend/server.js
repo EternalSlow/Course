@@ -72,6 +72,15 @@ db.serialize(() => {
     explanation TEXT,
     FOREIGN KEY (lesson_id) REFERENCES lessons(id)
   )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS user_mistakes (
+    user_id INTEGER NOT NULL,
+    task_id INTEGER NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, task_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (task_id) REFERENCES tasks(id)
+  )`);
 });
 
 const AVATAR_DIR = path.join(__dirname, 'uploads', 'avatars');
@@ -237,6 +246,10 @@ function bootstrapAdmin(onReady) {
 
     const names = new Set(columns.map((column) => column.name));
     const missingColumns = [
+      ['daily_goal', 'INTEGER DEFAULT 50'],
+      ['daily_minutes', 'INTEGER DEFAULT 0'],
+      ['daily_xp', 'INTEGER DEFAULT 0'],
+      ['daily_xp_date', 'TEXT'],
       ['is_admin', 'INTEGER DEFAULT 0'],
       ['must_change_password', 'INTEGER DEFAULT 0'],
     ].filter(([name]) => !names.has(name));
@@ -294,16 +307,16 @@ function bootstrapAdmin(onReady) {
 
 function requireAdmin(req, res, next) {
   const match = (req.get('authorization') || '').match(/^Bearer (.+)$/);
-  if (!match) return res.status(401).json({ error: 'Sign in required' });
+  if (!match) return res.status(401).json({ error: 'Требуется войти в аккаунт' });
 
   jwt.verify(match[1], SECRET_KEY, (tokenError, payload) => {
-    if (tokenError) return res.status(401).json({ error: 'Invalid session' });
+    if (tokenError) return res.status(401).json({ error: 'Сеанс недействителен' });
     db.get(
       `SELECT id, is_admin, must_change_password FROM users WHERE id = ?`,
       [payload.id],
       (dbError, user) => {
-        if (dbError) return res.status(500).json({ error: 'Unable to check admin access' });
-        if (!user?.is_admin) return res.status(403).json({ error: 'Admin access required' });
+        if (dbError) return res.status(500).json({ error: 'Не удалось проверить доступ администратора' });
+        if (!user?.is_admin) return res.status(403).json({ error: 'Требуется доступ администратора' });
         req.adminUser = user;
         next();
       }
@@ -313,12 +326,96 @@ function requireAdmin(req, res, next) {
 
 function requireChangedAdminPassword(req, res, next) {
   if (req.adminUser.must_change_password) {
-    return res.status(428).json({ error: 'Change the admin password before using this page' });
+    return res.status(428).json({ error: 'Перед использованием этой страницы измените пароль администратора' });
   }
   next();
 }
 
 // ---------- API ----------
+app.get('/api/user/:id/practice', (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isInteger(userId) || userId < 1) {
+    return res.status(400).json({ error: 'Неверный идентификатор пользователя' });
+  }
+
+  db.all(
+    `SELECT tasks.id AS taskId, lessons.lesson_number AS lessonNumber,
+       lessons.title AS lessonTitle, tasks.question
+     FROM user_mistakes
+     JOIN tasks ON tasks.id = user_mistakes.task_id
+     JOIN lessons ON lessons.id = tasks.lesson_id
+     WHERE user_mistakes.user_id = ?
+     ORDER BY user_mistakes.created_at DESC, tasks.id`,
+    [userId],
+    (err, mistakes) => {
+      if (err) return res.status(500).json({ error: 'Не удалось загрузить вопросы для повторения' });
+      res.json({ mistakes });
+    }
+  );
+});
+
+app.get('/api/user/:id/practice/:taskId', (req, res) => {
+  const userId = Number(req.params.id);
+  const taskId = Number(req.params.taskId);
+  if (!Number.isInteger(userId) || userId < 1 || !Number.isInteger(taskId) || taskId < 1) {
+    return res.status(400).json({ error: 'Неверный идентификатор пользователя или задания' });
+  }
+
+  db.get(
+    `SELECT lessons.id AS lessonId, lessons.lesson_number AS number,
+       lessons.title, lessons.subtitle, lessons.xp_reward,
+       tasks.id, tasks.type, tasks.question, tasks.options,
+       tasks.correct_answer, tasks.explanation
+     FROM user_mistakes
+     JOIN tasks ON tasks.id = user_mistakes.task_id
+     JOIN lessons ON lessons.id = tasks.lesson_id
+     WHERE user_mistakes.user_id = ? AND tasks.id = ?`,
+    [userId, taskId],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: 'Не удалось загрузить вопрос для повторения' });
+      if (!row) return res.status(404).json({ error: 'Вопрос для повторения не найден' });
+      const {
+        lessonId, number, title, subtitle, xp_reward,
+        id, type, question, options, correct_answer, explanation,
+      } = row;
+      res.json({
+        lesson: { id: lessonId, number, title, subtitle, xp_reward },
+        task: { id, type, question, options: options ? JSON.parse(options) : [], correct_answer, explanation },
+      });
+    }
+  );
+});
+
+app.post('/api/user/:id/task/:taskId/answer', (req, res) => {
+  const userId = Number(req.params.id);
+  const taskId = Number(req.params.taskId);
+  const { answer } = req.body;
+  if (!Number.isInteger(userId) || userId < 1 || !Number.isInteger(taskId) || taskId < 1 ||
+      typeof answer !== 'string') {
+    return res.status(400).json({ error: 'Неверный идентификатор пользователя, задания или ответа' });
+  }
+
+  db.get(`SELECT correct_answer FROM tasks WHERE id = ?`, [taskId], (err, task) => {
+    if (err) return res.status(500).json({ error: 'Не удалось проверить ответ' });
+    if (!task) return res.status(404).json({ error: 'Задание не найдено' });
+    const correct = answer === task.correct_answer;
+    if (correct) {
+      db.run(`DELETE FROM user_mistakes WHERE user_id = ? AND task_id = ?`, [userId, taskId], finishAnswer);
+    } else {
+      db.run(
+        `INSERT OR IGNORE INTO user_mistakes (user_id, task_id) VALUES (?, ?)`,
+        [userId, taskId],
+        finishAnswer
+      );
+    }
+
+    function finishAnswer(updateError) {
+      if (updateError) return res.status(500).json({ error: 'Не удалось сохранить результат ответа' });
+      res.json({ correct });
+    }
+  });
+});
+
 app.get('/api/user/:id/lesson/:number/tasks', (req, res) => {
   const userId = Number(req.params.id);
   const lessonNumber = Number(req.params.number);
@@ -367,7 +464,7 @@ app.post('/api/register', async (req, res) => {
   if (username.length < 3 || username.length > 32 ||
       email.length > 254 || !email.includes('@') ||
       typeof password !== 'string' || password.length < 6) {
-    return res.status(400).json({ error: 'Enter a name of 3 to 32 characters, a valid email, and a password of at least 6 characters' });
+    return res.status(400).json({ error: 'Укажите имя длиной от 3 до 32 символов, действующий адрес электронной почты и пароль не короче 6 символов' });
   }
 
   try {
@@ -404,7 +501,7 @@ app.post('/api/user/:id/language', (req, res) => {
 app.patch('/api/user/:id/profile', (req, res) => {
   const username = sanitizePlainText(req.body.username);
   if (username.length < 3 || username.length > 32) {
-    return res.status(400).json({ error: 'Name must contain 3 to 32 characters' });
+    return res.status(400).json({ error: 'Имя должно содержать от 3 до 32 символов' });
   }
 
   db.run(
@@ -412,10 +509,10 @@ app.patch('/api/user/:id/profile', (req, res) => {
     [username, req.params.id],
     function (err) {
       if (err?.code === 'SQLITE_CONSTRAINT') {
-        return res.status(409).json({ error: 'That name is already in use' });
+        return res.status(409).json({ error: 'Это имя уже занято' });
       }
-      if (err) return res.status(500).json({ error: 'Unable to update profile' });
-      if (!this.changes) return res.status(404).json({ error: 'User not found' });
+      if (err) return res.status(500).json({ error: 'Не удалось обновить профиль' });
+      if (!this.changes) return res.status(404).json({ error: 'Пользователь не найден' });
       res.json({ username });
     }
   );
@@ -451,7 +548,7 @@ app.get('/api/user/:id', (req, res) => {
     (err, row) => {
       if (err) {
         console.error('DB error /api/user:', err.message);
-        return res.status(500).json({ error: 'DB error', details: err.message });
+        return res.status(500).json({ error: 'Ошибка базы данных', details: err.message });
       }
       if (!row) return res.status(404).json({ error: 'Пользователь не найден' });
       res.json(row);
@@ -530,18 +627,18 @@ app.post('/api/user/:id/complete-lesson', (req, res) => {
   const userId = Number(req.params.id);
   const lessonNumber = Number(req.body.lessonNumber);
   if (!Number.isInteger(userId) || !Number.isInteger(lessonNumber) || lessonNumber < 1) {
-    return res.status(400).json({ error: 'Invalid user or lesson number' });
+    return res.status(400).json({ error: 'Неверный идентификатор пользователя или номер урока' });
   }
 
   db.get(`SELECT language, xp FROM users WHERE id = ?`, [userId], (userError, user) => {
-    if (userError) return res.status(500).json({ error: 'Unable to load user' });
+    if (userError) return res.status(500).json({ error: 'Не удалось загрузить пользователя' });
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
     db.get(
       `SELECT id, xp_reward FROM lessons WHERE language = ? AND lesson_number = ?`,
       [user.language, lessonNumber],
       (lessonError, lesson) => {
-        if (lessonError) return res.status(500).json({ error: 'Unable to load lesson' });
+        if (lessonError) return res.status(500).json({ error: 'Не удалось загрузить урок' });
         if (!lesson) return res.status(404).json({ error: 'Урок не найден' });
 
         db.run(
@@ -551,7 +648,7 @@ app.post('/api/user/:id/complete-lesson', (req, res) => {
            WHERE user_progress.completed = 0`,
           [userId, lesson.id],
           function (progressError) {
-            if (progressError) return res.status(500).json({ error: 'Unable to record lesson progress' });
+            if (progressError) return res.status(500).json({ error: 'Не удалось сохранить прогресс урока' });
             const alreadyCompleted = this.changes === 0;
             const xpEarned = alreadyCompleted ? 0 : Number(lesson.xp_reward) || 0;
             const nextNumber = lessonNumber + 1;
@@ -568,13 +665,19 @@ app.post('/api/user/:id/complete-lesson', (req, res) => {
 
             db.run(
               `UPDATE users
-               SET xp = xp + ?, current_lesson = MAX(current_lesson, ?)
+               SET xp = xp + ?,
+                   daily_xp = CASE
+                     WHEN daily_xp_date = date('now', 'localtime') THEN daily_xp + ?
+                     ELSE ?
+                   END,
+                   daily_xp_date = date('now', 'localtime'),
+                   current_lesson = MAX(current_lesson, ?)
                WHERE id = ?`,
-              [xpEarned, nextNumber, userId],
+              [xpEarned, xpEarned, xpEarned, nextNumber, userId],
               (updateError) => {
-                if (updateError) return res.status(500).json({ error: 'Unable to update lesson progress' });
+                if (updateError) return res.status(500).json({ error: 'Не удалось обновить прогресс урока' });
                 db.get(`SELECT xp FROM users WHERE id = ?`, [userId], (xpError, updatedUser) => {
-                  if (xpError || !updatedUser) return res.status(500).json({ error: 'Unable to load updated XP' });
+                  if (xpError || !updatedUser) return res.status(500).json({ error: 'Не удалось загрузить обновлённые очки XP' });
                   finishResponse(updatedUser.xp);
                 });
               }
@@ -586,13 +689,12 @@ app.post('/api/user/:id/complete-lesson', (req, res) => {
   });
 });
 
-// ВНИМАНИЕ: колонок daily_goal / daily_minutes / daily_xp нет в таблице users.
-// Либо добавь их в CREATE TABLE users, либо раскомментируй запрос ниже —
-// но как есть, этот эндпоинт всегда вернёт 404.
 app.get('/api/user/:id/goal', (req, res) => {
   const { id } = req.params;
   db.get(
-    `SELECT daily_goal, daily_minutes, daily_xp FROM users WHERE id = ?`,
+    `SELECT daily_goal, daily_minutes,
+       CASE WHEN daily_xp_date = date('now', 'localtime') THEN daily_xp ELSE 0 END AS daily_xp
+     FROM users WHERE id = ?`,
     [id],
     (err, row) => {
       if (err || !row) return res.status(404).json({ error: 'Пользователь не найден' });
@@ -626,31 +728,24 @@ app.post('/api/login', (req, res) => {
 });
 
 app.post('/api/admin/change-password', requireAdmin, async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+  const { newPassword } = req.body;
   if (typeof newPassword !== 'string' || newPassword.length < 12) {
-    return res.status(400).json({ error: 'New password must contain at least 12 characters' });
+    return res.status(400).json({ error: 'Новый пароль должен содержать не менее 12 символов' });
   }
 
-  db.get(`SELECT password FROM users WHERE id = ?`, [req.adminUser.id], async (err, row) => {
-    if (err || !row) return res.status(500).json({ error: 'Unable to check current password' });
-    if (!await bcrypt.compare(currentPassword || '', row.password)) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
-    }
-
-    try {
-      const passwordHash = await bcrypt.hash(newPassword, 12);
-      db.run(
-        `UPDATE users SET password = ?, must_change_password = 0 WHERE id = ?`,
-        [passwordHash, req.adminUser.id],
-        (updateError) => {
-          if (updateError) return res.status(500).json({ error: 'Unable to update password' });
-          res.json({ message: 'Password changed' });
-        }
-      );
-    } catch {
-      res.status(500).json({ error: 'Unable to update password' });
-    }
-  });
+  try {
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    db.run(
+      `UPDATE users SET password = ?, must_change_password = 0 WHERE id = ?`,
+      [passwordHash, req.adminUser.id],
+      (updateError) => {
+        if (updateError) return res.status(500).json({ error: 'Не удалось изменить пароль' });
+        res.json({ message: 'Пароль изменён' });
+      }
+    );
+  } catch {
+    res.status(500).json({ error: 'Не удалось изменить пароль' });
+  }
 });
 
 app.get('/api/admin/users', requireAdmin, requireChangedAdminPassword, (_req, res) => {
@@ -658,7 +753,7 @@ app.get('/api/admin/users', requireAdmin, requireChangedAdminPassword, (_req, re
     `SELECT id, username, email, language, xp, avatar, is_admin FROM users ORDER BY id`,
     [],
     (err, users) => {
-      if (err) return res.status(500).json({ error: 'Unable to load users' });
+      if (err) return res.status(500).json({ error: 'Не удалось загрузить список пользователей' });
       res.json({ users });
     }
   );
@@ -671,7 +766,7 @@ app.post('/api/admin/users', requireAdmin, requireChangedAdminPassword, async (r
   if (username.length < 3 || username.length > 32 ||
       email.length > 254 || !email.includes('@') ||
       typeof password !== 'string' || password.length < 8) {
-    return res.status(400).json({ error: 'Enter a name of 3 to 32 characters, a valid email, and a password of at least 8 characters' });
+    return res.status(400).json({ error: 'Укажите имя длиной от 3 до 32 символов, действующий адрес электронной почты и пароль не короче 8 символов' });
   }
 
   try {
@@ -680,29 +775,29 @@ app.post('/api/admin/users', requireAdmin, requireChangedAdminPassword, async (r
       `INSERT INTO users (username, email, password) VALUES (?, ?, ?)`,
       [username, email, passwordHash],
       function (err) {
-        if (err?.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ error: 'Name or email is already in use' });
-        if (err) return res.status(500).json({ error: 'Unable to create user' });
+        if (err?.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ error: 'Это имя или адрес электронной почты уже используется' });
+        if (err) return res.status(500).json({ error: 'Не удалось создать пользователя' });
         res.status(201).json({ id: this.lastID, username, email });
       }
     );
   } catch {
-    res.status(500).json({ error: 'Unable to create user' });
+    res.status(500).json({ error: 'Не удалось создать пользователя' });
   }
 });
 
 app.patch('/api/admin/users/:id', requireAdmin, requireChangedAdminPassword, (req, res) => {
   const username = sanitizePlainText(req.body.username);
   if (username.length < 3 || username.length > 32) {
-    return res.status(400).json({ error: 'Name must contain 3 to 32 characters' });
+    return res.status(400).json({ error: 'Имя должно содержать от 3 до 32 символов' });
   }
 
   db.run(
     `UPDATE users SET username = ? WHERE id = ? AND is_admin = 0`,
     [username, req.params.id],
     function (err) {
-      if (err?.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ error: 'Name is already in use' });
-      if (err) return res.status(500).json({ error: 'Unable to rename user' });
-      if (!this.changes) return res.status(404).json({ error: 'User not found' });
+      if (err?.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ error: 'Это имя уже занято' });
+      if (err) return res.status(500).json({ error: 'Не удалось изменить имя пользователя' });
+      if (!this.changes) return res.status(404).json({ error: 'Пользователь не найден' });
       res.json({ username });
     }
   );
@@ -710,21 +805,24 @@ app.patch('/api/admin/users/:id', requireAdmin, requireChangedAdminPassword, (re
 
 app.delete('/api/admin/users/:id', requireAdmin, requireChangedAdminPassword, (req, res) => {
   db.get(`SELECT avatar FROM users WHERE id = ? AND is_admin = 0`, [req.params.id], (err, user) => {
-    if (err) return res.status(500).json({ error: 'Unable to load user' });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    db.run(`DELETE FROM user_progress WHERE user_id = ?`, [req.params.id], (progressError) => {
-      if (progressError) return res.status(500).json({ error: 'Unable to remove user progress' });
-      db.run(`DELETE FROM users WHERE id = ? AND is_admin = 0`, [req.params.id], function (deleteError) {
-        if (deleteError) return res.status(500).json({ error: 'Unable to delete user' });
-        if (user.avatar) fs.unlink(path.join(__dirname, user.avatar), () => {});
-        res.json({ deleted: true });
+    if (err) return res.status(500).json({ error: 'Не удалось загрузить пользователя' });
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+    db.run(`DELETE FROM user_mistakes WHERE user_id = ?`, [req.params.id], (mistakesError) => {
+      if (mistakesError) return res.status(500).json({ error: 'Не удалось удалить вопросы для повторения' });
+      db.run(`DELETE FROM user_progress WHERE user_id = ?`, [req.params.id], (progressError) => {
+        if (progressError) return res.status(500).json({ error: 'Не удалось удалить прогресс пользователя' });
+        db.run(`DELETE FROM users WHERE id = ? AND is_admin = 0`, [req.params.id], function (deleteError) {
+          if (deleteError) return res.status(500).json({ error: 'Не удалось удалить пользователя' });
+          if (user.avatar) fs.unlink(path.join(__dirname, user.avatar), () => {});
+          res.json({ deleted: true });
+        });
       });
     });
   });
 });
 
 app.post('/api/admin/users/:id/avatar', requireAdmin, requireChangedAdminPassword, upload.single('avatar'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Image file required' });
+  if (!req.file) return res.status(400).json({ error: 'Выберите файл изображения' });
   const avatarPath = `/uploads/avatars/${req.file.filename}`;
   db.get(`SELECT avatar FROM users WHERE id = ? AND is_admin = 0`, [req.params.id], (err, user) => {
     if (err || !user) {
@@ -732,7 +830,7 @@ app.post('/api/admin/users/:id/avatar', requireAdmin, requireChangedAdminPasswor
       return res.status(err ? 500 : 404).json({ error: err ? 'Unable to load user' : 'User not found' });
     }
     db.run(`UPDATE users SET avatar = ? WHERE id = ?`, [avatarPath, req.params.id], (updateError) => {
-      if (updateError) return res.status(500).json({ error: 'Unable to save user icon' });
+      if (updateError) return res.status(500).json({ error: 'Не удалось сохранить аватар пользователя' });
       if (user.avatar) fs.unlink(path.join(__dirname, user.avatar), () => {});
       res.json({ avatar: avatarPath });
     });
@@ -741,10 +839,10 @@ app.post('/api/admin/users/:id/avatar', requireAdmin, requireChangedAdminPasswor
 
 app.delete('/api/admin/users/:id/avatar', requireAdmin, requireChangedAdminPassword, (req, res) => {
   db.get(`SELECT avatar FROM users WHERE id = ? AND is_admin = 0`, [req.params.id], (err, user) => {
-    if (err) return res.status(500).json({ error: 'Unable to load user' });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (err) return res.status(500).json({ error: 'Не удалось загрузить пользователя' });
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
     db.run(`UPDATE users SET avatar = NULL WHERE id = ?`, [req.params.id], (updateError) => {
-      if (updateError) return res.status(500).json({ error: 'Unable to remove user icon' });
+      if (updateError) return res.status(500).json({ error: 'Не удалось удалить аватар пользователя' });
       if (user.avatar) fs.unlink(path.join(__dirname, user.avatar), () => {});
       res.json({ avatar: null });
     });
@@ -753,7 +851,7 @@ app.delete('/api/admin/users/:id/avatar', requireAdmin, requireChangedAdminPassw
 
 app.get('/api/admin/lessons', requireAdmin, requireChangedAdminPassword, (_req, res) => {
   db.all(`SELECT * FROM lessons ORDER BY language, lesson_number`, [], (err, lessons) => {
-    if (err) return res.status(500).json({ error: 'Unable to load lessons' });
+    if (err) return res.status(500).json({ error: 'Не удалось загрузить уроки' });
     res.json({ lessons });
   });
 });
@@ -841,7 +939,7 @@ app.post('/api/admin/lessons', requireAdmin, requireChangedAdminPassword, (req, 
       !isTextWithinLimit(cleanSubtitle, LESSON_TEXT_LIMITS.subtitle) ||
       !isTextWithinLimit(cleanContent, LESSON_TEXT_LIMITS.content) ||
       !Number.isSafeInteger(xpReward) || xpReward < 0 || xpReward > 10000 || !validTasks) {
-    return res.status(400).json({ error: 'Check lesson text limits and add valid tasks with 2 to 6 options, including the correct answer' });
+    return res.status(400).json({ error: 'Проверьте длину текста урока и добавьте задания с 2–6 вариантами ответа, включая правильный ответ' });
   }
 
   db.run(
@@ -849,14 +947,14 @@ app.post('/api/admin/lessons', requireAdmin, requireChangedAdminPassword, (req, 
      VALUES (?, ?, ?, ?, ?, ?)`,
     [language, Number(lesson_number), cleanTitle, cleanSubtitle, cleanContent, xpReward],
     function (err) {
-      if (err?.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ error: 'That lesson number already exists for this language' });
-      if (err) return res.status(500).json({ error: 'Unable to create lesson' });
+      if (err?.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ error: 'Урок с таким номером для этого языка уже существует' });
+      if (err) return res.status(500).json({ error: 'Не удалось создать урок' });
       const lessonId = this.lastID;
       saveLessonTasks(lessonId, cleanTasks, (taskError) => {
         if (taskError) {
           db.run(`DELETE FROM tasks WHERE lesson_id = ?`, [lessonId]);
           db.run(`DELETE FROM lessons WHERE id = ?`, [lessonId]);
-          return res.status(500).json({ error: 'Unable to save lesson tasks' });
+          return res.status(500).json({ error: 'Не удалось сохранить задания урока' });
         }
         db.run(`UPDATE users SET total_lessons = total_lessons + 1 WHERE language = ?`, [language]);
         res.status(201).json({ id: lessonId });
@@ -876,31 +974,38 @@ app.patch('/api/admin/lessons/:id', requireAdmin, requireChangedAdminPassword, (
       !isTextWithinLimit(cleanSubtitle, LESSON_TEXT_LIMITS.subtitle) ||
       !isTextWithinLimit(cleanContent, LESSON_TEXT_LIMITS.content) ||
       !Number.isSafeInteger(xpReward) || xpReward < 0 || xpReward > 10000) {
-    return res.status(400).json({ error: 'Enter valid lesson details within the allowed limits' });
+    return res.status(400).json({ error: 'Проверьте данные урока и допустимую длину полей' });
   }
   db.run(
     `UPDATE lessons SET title = ?, subtitle = ?, content = ?, xp_reward = ? WHERE id = ?`,
     [cleanTitle, cleanSubtitle, cleanContent, xpReward, req.params.id],
     function (err) {
-      if (err) return res.status(500).json({ error: 'Unable to update lesson' });
-      if (!this.changes) return res.status(404).json({ error: 'Lesson not found' });
+      if (err) return res.status(500).json({ error: 'Не удалось обновить урок' });
+      if (!this.changes) return res.status(404).json({ error: 'Урок не найден' });
       res.json({ updated: true });
     }
   );
 });
 
 app.delete('/api/admin/lessons/:id', requireAdmin, requireChangedAdminPassword, (req, res) => {
-  db.run(`DELETE FROM tasks WHERE lesson_id = ?`, [req.params.id], (taskError) => {
-    if (taskError) return res.status(500).json({ error: 'Unable to remove lesson tasks' });
-    db.run(`DELETE FROM user_progress WHERE lesson_id = ?`, [req.params.id], function (progressError) {
-      if (progressError) return res.status(500).json({ error: 'Unable to remove lesson progress' });
-      db.run(`DELETE FROM lessons WHERE id = ?`, [req.params.id], function (deleteError) {
-        if (deleteError) return res.status(500).json({ error: 'Unable to delete lesson' });
-        if (!this.changes) return res.status(404).json({ error: 'Lesson not found' });
-        res.json({ deleted: true });
+  db.run(
+    `DELETE FROM user_mistakes WHERE task_id IN (SELECT id FROM tasks WHERE lesson_id = ?)`,
+    [req.params.id],
+    (mistakesError) => {
+      if (mistakesError) return res.status(500).json({ error: 'Не удалось удалить вопросы для повторения' });
+      db.run(`DELETE FROM tasks WHERE lesson_id = ?`, [req.params.id], (taskError) => {
+        if (taskError) return res.status(500).json({ error: 'Не удалось удалить задания урока' });
+        db.run(`DELETE FROM user_progress WHERE lesson_id = ?`, [req.params.id], function (progressError) {
+          if (progressError) return res.status(500).json({ error: 'Не удалось удалить прогресс урока' });
+          db.run(`DELETE FROM lessons WHERE id = ?`, [req.params.id], function (deleteError) {
+            if (deleteError) return res.status(500).json({ error: 'Не удалось удалить урок' });
+            if (!this.changes) return res.status(404).json({ error: 'Урок не найден' });
+            res.json({ deleted: true });
+          });
+        });
       });
-    });
-  });
+    }
+  );
 });
 
 const PORT = Number(process.env.PORT) || 5000;

@@ -20,13 +20,18 @@ export default function LessonComplete({
   onReview 
 }) {
   const navigate = useNavigate();
+  const goal = Number(dailyGoal);
+  const xpToday = Number(dailyXP);
+  const dailyProgress = Number.isFinite(goal) && goal > 0 && Number.isFinite(xpToday)
+    ? Math.min(100, Math.max(0, (xpToday / goal) * 100))
+    : 0;
 
   return (
     <div className="lesson-complete page-container">
       <div className="app-container">
         {/* Робот */}
         <div className="complete-mascot">
-          <img src={robot} alt="Robot" className="complete-robot" />
+          <img src={robot} alt="Робот" className="complete-robot" />
           <div className="confetti">
             <span className="confetti-piece" style={{ left: '20%', top: '10%' }} />
             <span className="confetti-piece" style={{ left: '80%', top: '15%' }} />
@@ -36,9 +41,9 @@ export default function LessonComplete({
         </div>
 
         {/* Заголовок */}
-        <h1 className="complete-title">Look at you, coder!</h1>
+        <h1 className="complete-title">Отличная работа!</h1>
         <p className="complete-subtitle">
-          {lessonTitle} complete. {nextLessonTitle} unlocked.
+          Урок «{lessonTitle}» завершён. Урок «{nextLessonTitle}» открыт.
         </p>
 
         {/* Статистика */}
@@ -46,19 +51,19 @@ export default function LessonComplete({
           <div className="stat-card xp">
             <div className="stat-icon">⚡</div>
             <div className="stat-value">+{xpEarned} XP</div>
-            <div className="stat-label">EARNED</div>
+            <div className="stat-label">ПОЛУЧЕНО</div>
           </div>
           
           <div className="stat-card accuracy">
             <div className="stat-icon"></div>
             <div className="stat-value">{accuracy}%</div>
-            <div className="stat-label">ACCURACY</div>
+            <div className="stat-label">ТОЧНОСТЬ</div>
           </div>
           
           <div className="stat-card time">
             <div className="stat-icon">🕐</div>
             <div className="stat-value">{timeSpent}</div>
-            <div className="stat-label">TIME</div>
+            <div className="stat-label">ВРЕМЯ</div>
           </div>
         </div>
 
@@ -66,36 +71,35 @@ export default function LessonComplete({
         <div className="results-card">
           <div className="results-header">
             <span className="check-icon">✓</span>
-            <strong>{correctAnswers} of {totalAnswers} answers correct</strong>
+            <strong>Правильных ответов: {correctAnswers} из {totalAnswers}</strong>
           </div>
           <p className="results-details">
-            You nailed the last one: apples goes from 2 to 3. 
-            Revisit one missed answer in practice.
+            Последний ответ был верным. Повторите ошибки в разделе практики.
           </p>
         </div>
 
         {/* Общий XP */}
         <div className="total-xp-section">
           <div className="total-xp-header">
-            <span>Total XP</span>
-            <span className="xp-change">{previousXP} → {totalXP}</span>
+            <span>Прогресс цели на сегодня</span>
+            <span className="xp-change">{previousXP} → {totalXP} XP</span>
           </div>
           <div className="xp-progress-track">
-            <div className="xp-progress-fill" style={{ width: `${(dailyXP / dailyGoal) * 100}%` }} />
+            <div className="xp-progress-fill" style={{ width: `${dailyProgress}%` }} />
           </div>
           <p className="daily-xp-info">
-            {dailyXP} / {dailyGoal} XP today · {streakDays}-day streak going strong
+            Сегодня: {dailyXP} / {dailyGoal} XP · серия: {streakDays} дн.
           </p>
         </div>
 
         {/* Кнопки */}
         <div className="complete-buttons">
           <button className="btn-primary continue-btn" onClick={onNext || (() => navigate('/lesson'))}>
-            <span>→</span> On to {nextLessonTitle}
+            <span>→</span> К уроку «{nextLessonTitle}»
           </button>
           
           <button className="btn-secondary review-btn" onClick={onReview || (() => navigate('/practice'))}>
-            Review my mistake
+            Разобрать ошибку
           </button>
         </div>
       </div>

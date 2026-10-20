@@ -5,9 +5,9 @@ import { useAuth } from './AuthContext';
 
 const API_BASE = 'http://localhost:5000/api';
 const podiumPlaces = {
-  1: { label: '★ 1ST', place: 'first' },
-  2: { label: '2ND', place: 'second' },
-  3: { label: '3RD', place: 'third' },
+  1: { label: '★ 1-Е', place: 'first' },
+  2: { label: '2-Е', place: 'second' },
+  3: { label: '3-Е', place: 'third' },
 };
 
 const getInitials = (name = '') => name.trim().slice(0, 2).toUpperCase() || '?';
@@ -51,11 +51,11 @@ const NavIcons = {
 };
 
 const navItems = [
-  { to: '/home',     icon: 'home',   label: 'home' },
-  { to: '/lesson',   icon: 'book',   label: 'Learn' },
-  { to: '/practice', icon: 'code',   label: 'Practice' },
-  { to: '/league',   icon: 'trophy', label: 'League' },
-  { to: '/profile',  icon: 'user',   label: 'Profile' },
+  { to: '/home',     icon: 'home',   label: 'Главная' },
+  { to: '/lesson',   icon: 'book',   label: 'Уроки' },
+  { to: '/practice', icon: 'code',   label: 'Практика' },
+  { to: '/league',   icon: 'trophy', label: 'Лига' },
+  { to: '/profile',  icon: 'user',   label: 'Профиль' },
 ];
 
 export default function League() {
@@ -78,11 +78,11 @@ export default function League() {
         return response.json();
       })
       .then((data) => {
-        if (!Array.isArray(data.learners)) throw new Error('Invalid leaderboard data');
+        if (!Array.isArray(data.learners)) throw new Error('Некорректные данные рейтинга');
         setLearners(data.learners);
       })
       .catch((fetchError) => {
-        if (fetchError.name !== 'AbortError') setError('Unable to load the leaderboard.');
+        if (fetchError.name !== 'AbortError') setError('Не удалось загрузить рейтинг.');
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -106,18 +106,11 @@ export default function League() {
       <div className="app-container">
 
         {/* Section Tag */}
-        <div className="section-tag">Leaderboard</div>
+        <div className="section-tag">Рейтинг</div>
 
         {/* Header */}
         <div className="header-row">
-          <h1 className="header-title">Better together</h1>
-          <div className="header-action">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="16" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12.01" y2="8" />
-            </svg>
-          </div>
+          <h1 className="header-title">Вместе — лучше</h1>
         </div>
 
         {/* Club Header */}
@@ -133,9 +126,9 @@ export default function League() {
                 <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
               </svg>
             </div>
-            <div className="club-name">Byte club</div>
+            <div className="club-name">Клуб Byte</div>
           </div>
-          <button type="button" className="period-btn">All-time XP</button>
+          <button type="button" className="period-btn">Всего XP</button>
         </div>
 
         {/* Podium */}
@@ -162,16 +155,16 @@ export default function League() {
           </div>
           <div className="encourage-text">
             {currentRank
-              ? `You're #${currentRank} of ${learners.length} learners.${topThreeGap === null ? ' Great work in the top three!' : ` Only ${formatXP(topThreeGap)} from the top three!`}`
-              : 'Join the leaderboard by completing lessons and earning XP.'}
+              ? `Вы на ${currentRank}-м месте из ${learners.length}.${topThreeGap === null ? ' Отличная работа — вы в первой тройке!' : ` До первой тройки осталось ${formatXP(topThreeGap)}!`}`
+              : 'Проходите уроки и получайте XP, чтобы попасть в рейтинг.'}
           </div>
         </div>
 
         {/* Leaderboard List */}
         <div className="leaderboard-list">
-          {loading && <p>Loading leaderboard...</p>}
+          {loading && <p>Загрузка рейтинга...</p>}
           {error && <p role="alert">{error}</p>}
-          {!loading && !error && learners.length === 0 && <p>No learners yet.</p>}
+          {!loading && !error && learners.length === 0 && <p>Пока нет участников.</p>}
           {leaderboard.map((row) => (
             <div
               key={row.id}
@@ -183,7 +176,7 @@ export default function League() {
               </div>
               <div className="lb-info">
                 <div className="lb-name">{row.username}</div>
-                {row.id === user?.userId && <div className="lb-you">YOU</div>}
+                {row.id === user?.userId && <div className="lb-you">ВЫ</div>}
               </div>
               <div className="lb-xp">{formatXP(row.xp)}</div>
             </div>
@@ -191,7 +184,7 @@ export default function League() {
         </div>
 
         {/* Footer Message */}
-        <div className="footer-message">Friendly competition. Real progress.</div>
+        <div className="footer-message">Дружеское соревнование помогает расти.</div>
 
         {/* Bottom Navigation */}
         <nav className="bottom-nav">

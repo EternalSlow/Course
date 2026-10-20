@@ -4,10 +4,10 @@ import './DailyGoal.css';
 const API_BASE = 'http://localhost:5000/api';
 
 const goalOptions = [
-  { id: 'Just a taste',    minutes: 5,  xp: 10, label: 'Just a taste',    time: '5 min / day' },
-  { id: 'Build a habit',   minutes: 10, xp: 30, label: 'Build a habit',   time: '10 min / day' },
-  { id: 'Make real progress', minutes: 15, xp: 50, label: 'Make real progress', time: '15 min / day' },
-  { id: 'All in on code',  minutes: 20, xp: 70, label: 'All in on code',  time: '20 min / day' },
+  { id: 'Just a taste',    minutes: 5,  xp: 10, label: 'Попробовать',    time: '5 мин в день' },
+  { id: 'Build a habit',   minutes: 10, xp: 30, label: 'Выработать привычку',   time: '10 мин в день' },
+  { id: 'Make real progress', minutes: 15, xp: 50, label: 'Добиться прогресса', time: '15 мин в день' },
+  { id: 'All in on code',  minutes: 20, xp: 70, label: 'Углубиться в код',  time: '20 мин в день' },
 ];
 
 export default function DailyGoal({ userId, onNext }) {
@@ -109,14 +109,14 @@ export default function DailyGoal({ userId, onNext }) {
             </svg>
           </div>
           <div className="mascot-bubble">
-            <p>Small steps every day.</p>
-            <p>That's how we grow!</p>
+            <p>Каждый день — новый шаг.</p>
+            <p>Так мы растём!</p>
           </div>
         </div>
 
         {/* Заголовок */}
-        <h1 className="goal-title">What's your daily goal?</h1>
-        <p className="goal-subtitle">Make a little room for your next big skill.</p>
+        <h1 className="goal-title">Какова ваша цель на день?</h1>
+        <p className="goal-subtitle">Найдите время для нового навыка.</p>
 
         {/* Варианты целей */}
         <div className="goal-options">
@@ -146,7 +146,7 @@ export default function DailyGoal({ userId, onNext }) {
         </div>
 
         {/* Подсказка */}
-        <p className="goal-hint">Your goal, your pace. Change it anytime.</p>
+        <p className="goal-hint">Выберите свой темп. Цель можно изменить позже.</p>
 
         {/* Кнопка подтверждения */}
         <button
@@ -154,7 +154,7 @@ export default function DailyGoal({ userId, onNext }) {
           onClick={handleSetGoal}
           disabled={loading}
         >
-          {loading ? 'Saving...' : 'Set my goal'}
+          {loading ? 'Сохраняем...' : 'Сохранить цель'}
         </button>
 
         {/* Информация о текущем уроке (если загружен) */}

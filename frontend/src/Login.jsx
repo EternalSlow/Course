@@ -35,7 +35,7 @@ export default function Login() {
         <h1 className="header-title">Вход</h1>
         <form className="auth-form" onSubmit={handleSubmit}>
           <input value={login} onChange={(e) => setLogin(e.target.value)}
-                 placeholder="Email или username" autoComplete="username" required />
+                 placeholder="Электронная почта или имя пользователя" autoComplete="username" required />
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                  placeholder="Пароль" autoComplete="current-password" required />
           {error && <p className="auth-error" role="alert">{error}</p>}

@@ -8,22 +8,22 @@ const languages = [
     name: 'Python',
     icon: 'Py',
     iconClass: 'language-icon-python',
-    topics: '6 topics',
-    level: 'Beginner friendly',
-    description: 'From your first print to powerful ideas. Great for automation, data and curious minds.',
+    topics: '6 тем',
+    level: 'Для начинающих',
+    description: 'От первой команды print до больших идей. Изучайте автоматизацию, данные и многое другое.',
   },
   {
     id: 'javascript',
     name: 'JavaScript',
     icon: 'JS',
     iconClass: 'language-icon-js',
-    topics: '6 topics',
-    level: 'Beginner friendly',
-    description: 'Bring the web to life. Build interactive websites and turn clicks into possibilities.',
+    topics: '6 тем',
+    level: 'Для начинающих',
+    description: 'Добавьте интерактивности сайтам и создавайте новые возможности в интернете.',
   },
 ];
 
-const topics = ['Hello World', 'Variables', 'Conditions', 'Loops', 'Functions', 'Arrays'];
+const topics = ['Привет, мир', 'Переменные', 'Условия', 'Циклы', 'Функции', 'Массивы'];
 
 const LanguageSelection = () => {
   const [selectedLanguage, setSelectedLanguage] = useState('python');
@@ -58,12 +58,12 @@ const LanguageSelection = () => {
     <div className="language-picker-container">
       {/* Header */}
       <div className="language-picker-header">
-        <div className="language-picker-subtitle">LET'S MAKE IT YOURS</div>
+        <div className="language-picker-subtitle">НАСТРОЙТЕ ОБУЧЕНИЕ</div>
         <div className="language-picker-title-row">
           <span className="language-picker-back-arrow">←</span>
-          <h1 className="language-picker-title">Pick your first language</h1>
+          <h1 className="language-picker-title">Выберите первый язык</h1>
         </div>
-        <p className="language-picker-description">Start with one. You can always add another.</p>
+        <p className="language-picker-description">Начните с одного. Позже можно выбрать другой.</p>
       </div>
 
       {/* Language Cards */}
@@ -116,7 +116,7 @@ const LanguageSelection = () => {
 
       {/* Topics Section */}
       <div className="topics-section">
-        <h3 className="topics-title">YOUR FIRST SIX TOPICS</h3>
+        <h3 className="topics-title">ПЕРВЫЕ ШЕСТЬ ТЕМ</h3>
         <div className="topics-grid">
           {topics.map((topic) => (
             <span key={topic} className="topic-tag">
@@ -129,10 +129,10 @@ const LanguageSelection = () => {
       {/* Footer */}
       <div className="language-picker-footer">
         <p className="language-picker-footer-text">
-          No experience needed. Just a little curiosity.
+          Опыт не нужен. Достаточно любопытства.
         </p>
         <button className="continue-button" onClick={handleContinue}>
-          Continue with {selectedLang?.name}
+          Продолжить с языком {selectedLang?.name}
         </button>
       </div>
     </div>

@@ -10,7 +10,7 @@ async function adminApi(token, path, options = {}) {
   const headers = { Authorization: `Bearer ${token}`, ...options.headers };
   const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || 'Request failed');
+  if (!response.ok) throw new Error(data.error || 'Не удалось выполнить запрос');
   return data;
 }
 
@@ -21,8 +21,8 @@ export default function Admin() {
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [userForm, setUserForm] = useState({ username: '', email: '', password: '' });
   const [lessonForm, setLessonForm] = useState({
     language: 'Python', lesson_number: '', title: '', subtitle: '', content: '', xp_reward: 50,
@@ -68,15 +68,19 @@ export default function Admin() {
   const handlePasswordChange = async (event) => {
     event.preventDefault();
     setError('');
+    if (newPassword !== confirmPassword) {
+      setError('Пароли не совпадают');
+      return;
+    }
     try {
       await adminApi(user?.token, '/admin/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify({ newPassword }),
       });
       login({ ...user, mustChangePassword: false });
-      setCurrentPassword('');
       setNewPassword('');
+      setConfirmPassword('');
       await loadData();
     } catch (changeError) {
       setError(changeError.message);
@@ -100,7 +104,7 @@ export default function Admin() {
   };
 
   const handleRenameUser = async (targetUser) => {
-    const username = window.prompt('New user name', targetUser.username);
+    const username = window.prompt('Новое имя пользователя', targetUser.username);
     if (!username || username === targetUser.username) return;
     setError('');
     try {
@@ -116,7 +120,7 @@ export default function Admin() {
   };
 
   const handleDeleteUser = async (targetUser) => {
-    if (!window.confirm(`Delete ${targetUser.username}?`)) return;
+    if (!window.confirm(`Удалить пользователя ${targetUser.username}?`)) return;
     setError('');
     try {
       await adminApi(user?.token, `/admin/users/${targetUser.id}`, { method: 'DELETE' });
@@ -187,7 +191,7 @@ export default function Admin() {
   };
 
   const handleDeleteLesson = async (lesson) => {
-    if (!window.confirm(`Delete ${lesson.title}?`)) return;
+    if (!window.confirm(`Удалить урок «${lesson.title}»?`)) return;
     setError('');
     try {
       await adminApi(user?.token, `/admin/lessons/${lesson.id}`, { method: 'DELETE' });
@@ -198,23 +202,23 @@ export default function Admin() {
   };
 
   if (!user?.isAdmin) {
-    return <div className="admin page-container"><div className="app-container admin-content"><p>Admin access required.</p></div></div>;
+    return <div className="admin page-container"><div className="app-container admin-content"><p>Требуется доступ администратора.</p></div></div>;
   }
 
   if (user.mustChangePassword) {
     return (
       <div className="admin page-container">
         <div className="app-container admin-content">
-          <p className="course-tag">Admin account</p>
-          <h1 className="header-title">Change your password</h1>
-          <p className="admin-copy">Set a new password before you use the admin panel.</p>
+          <p className="course-tag">Учётная запись администратора</p>
+          <h1 className="header-title">Измените пароль</h1>
+          <p className="admin-copy">Задайте новый пароль, чтобы открыть панель администратора.</p>
           <form className="admin-form" onSubmit={handlePasswordChange}>
-            <input type="password" placeholder="Current password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" required />
-            <input type="password" placeholder="New password (12 characters minimum)" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} minLength={12} autoComplete="new-password" required />
+            <input type="password" placeholder="Новый пароль (не менее 12 символов)" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} minLength={12} autoComplete="new-password" required />
+            <input type="password" placeholder="Повторите новый пароль" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={12} autoComplete="new-password" required />
             {error && <p className="admin-error" role="alert">{error}</p>}
-            <button className="btn-primary green" type="submit">Update password</button>
+            <button className="btn-primary green" type="submit">Изменить пароль</button>
           </form>
-          <button className="settings-logout" type="button" onClick={() => { logout(); navigate('/login'); }}>Log out</button>
+          <button className="settings-logout" type="button" onClick={() => { logout(); navigate('/login'); }}>Выйти</button>
         </div>
       </div>
     );
@@ -224,19 +228,19 @@ export default function Admin() {
     <div className="admin page-container">
       <div className="app-container admin-content">
         <header className="admin-header">
-          <div><p className="course-tag">Byte</p><h1 className="header-title">Admin</h1></div>
-          <button className="settings-logout admin-logout" type="button" onClick={() => { logout(); navigate('/login'); }}>Log out</button>
+          <div><p className="course-tag">Byte</p><h1 className="header-title">Администратор</h1></div>
+          <button className="settings-logout admin-logout" type="button" onClick={() => { logout(); navigate('/login'); }}>Выйти</button>
         </header>
         {error && <p className="admin-error" role="alert">{error}</p>}
-        {loading ? <p>Loading admin data...</p> : (
+        {loading ? <p>Загрузка данных...</p> : (
           <>
             <section className="admin-section">
-              <h2>Users</h2>
+              <h2>Пользователи</h2>
               <form className="admin-form" onSubmit={handleCreateUser}>
-                <input placeholder="Name" value={userForm.username} onChange={(event) => setUserForm({ ...userForm, username: event.target.value })} minLength={3} maxLength={32} required />
-                <input type="email" placeholder="Email" value={userForm.email} onChange={(event) => setUserForm({ ...userForm, email: event.target.value })} maxLength={254} required />
-                <input type="password" placeholder="Temporary password" value={userForm.password} onChange={(event) => setUserForm({ ...userForm, password: event.target.value })} minLength={8} required />
-                <button className="btn-primary green" type="submit">Create user</button>
+                <input placeholder="Имя" value={userForm.username} onChange={(event) => setUserForm({ ...userForm, username: event.target.value })} minLength={3} maxLength={32} required />
+                <input type="email" placeholder="Электронная почта" value={userForm.email} onChange={(event) => setUserForm({ ...userForm, email: event.target.value })} maxLength={254} required />
+                <input type="password" placeholder="Временный пароль" value={userForm.password} onChange={(event) => setUserForm({ ...userForm, password: event.target.value })} minLength={8} required />
+                <button className="btn-primary green" type="submit">Создать пользователя</button>
               </form>
               <div className="admin-list">
                 {users.map((item) => (
@@ -246,10 +250,10 @@ export default function Admin() {
                       <div><strong>{item.username}</strong><span>{item.email}</span></div>
                     </div>
                     <div className="admin-actions">
-                      <button type="button" onClick={() => handleRenameUser(item)}>Rename</button>
-                      <label className="admin-upload">Icon<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => handleUserAvatar(item, event.target.files?.[0])} /></label>
-                      {item.avatar && <button type="button" onClick={() => handleDeleteAvatar(item)}>Remove icon</button>}
-                      {!item.is_admin && <button type="button" onClick={() => handleDeleteUser(item)}>Delete</button>}
+                      <button type="button" onClick={() => handleRenameUser(item)}>Изменить имя</button>
+                      <label className="admin-upload">Аватар<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => handleUserAvatar(item, event.target.files?.[0])} /></label>
+                      {item.avatar && <button type="button" onClick={() => handleDeleteAvatar(item)}>Удалить аватар</button>}
+                      {!item.is_admin && <button type="button" onClick={() => handleDeleteUser(item)}>Удалить</button>}
                     </div>
                   </article>
                 ))}
@@ -257,39 +261,39 @@ export default function Admin() {
             </section>
 
             <section className="admin-section">
-              <h2>{editingLessonId ? 'Edit lesson' : 'Create lesson'}</h2>
+              <h2>{editingLessonId ? 'Изменить урок' : 'Создать урок'}</h2>
               <form className="admin-form" onSubmit={handleLessonSubmit}>
                 <div className="admin-form-row">
                   <select value={lessonForm.language} onChange={(event) => setLessonForm({ ...lessonForm, language: event.target.value })} disabled={Boolean(editingLessonId)}>
                     <option>Python</option><option>JavaScript</option>
                   </select>
-                  <input type="number" min="1" placeholder="Lesson number" value={lessonForm.lesson_number} onChange={(event) => setLessonForm({ ...lessonForm, lesson_number: Number(event.target.value) })} disabled={Boolean(editingLessonId)} required />
+                  <input type="number" min="1" placeholder="Номер урока" value={lessonForm.lesson_number} onChange={(event) => setLessonForm({ ...lessonForm, lesson_number: Number(event.target.value) })} disabled={Boolean(editingLessonId)} required />
                 </div>
-                <input placeholder="Lesson title" value={lessonForm.title} onChange={(event) => setLessonForm({ ...lessonForm, title: event.target.value })} maxLength={100} required />
-                <input placeholder="Subtitle" value={lessonForm.subtitle} onChange={(event) => setLessonForm({ ...lessonForm, subtitle: event.target.value })} maxLength={180} />
-                <textarea placeholder="Lesson content" value={lessonForm.content} onChange={(event) => setLessonForm({ ...lessonForm, content: event.target.value })} maxLength={5000} />
-                <label className="admin-inline-field">XP reward<input type="number" min="0" value={lessonForm.xp_reward} onChange={(event) => setLessonForm({ ...lessonForm, xp_reward: Number(event.target.value) })} /></label>
+                <input placeholder="Название урока" value={lessonForm.title} onChange={(event) => setLessonForm({ ...lessonForm, title: event.target.value })} maxLength={100} required />
+                <input placeholder="Подзаголовок" value={lessonForm.subtitle} onChange={(event) => setLessonForm({ ...lessonForm, subtitle: event.target.value })} maxLength={180} />
+                <textarea placeholder="Содержание урока" value={lessonForm.content} onChange={(event) => setLessonForm({ ...lessonForm, content: event.target.value })} maxLength={5000} />
+                <label className="admin-inline-field">Награда XP<input type="number" min="0" value={lessonForm.xp_reward} onChange={(event) => setLessonForm({ ...lessonForm, xp_reward: Number(event.target.value) })} /></label>
                 {!editingLessonId && tasks.map((task, index) => (
                   <div className="admin-task" key={index}>
-                    <h3>Task {index + 1}</h3>
-                    <textarea placeholder="Question" value={task.question} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, question: event.target.value } : item))} maxLength={1000} required />
-                    <input placeholder="Options, separated by commas (2 to 6 options)" value={task.options} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, options: event.target.value } : item))} maxLength={1540} required />
-                    <input placeholder="Correct answer" value={task.correct_answer} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, correct_answer: event.target.value } : item))} maxLength={300} required />
-                    <input placeholder="Explanation" value={task.explanation} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, explanation: event.target.value } : item))} maxLength={500} />
-                    {tasks.length > 1 && <button type="button" onClick={() => setTasks(tasks.filter((_, itemIndex) => itemIndex !== index))}>Remove task</button>}
+                    <h3>Задание {index + 1}</h3>
+                    <textarea placeholder="Вопрос" value={task.question} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, question: event.target.value } : item))} maxLength={1000} required />
+                    <input placeholder="Варианты через запятую (от 2 до 6)" value={task.options} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, options: event.target.value } : item))} maxLength={1540} required />
+                    <input placeholder="Правильный ответ" value={task.correct_answer} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, correct_answer: event.target.value } : item))} maxLength={300} required />
+                    <input placeholder="Объяснение" value={task.explanation} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, explanation: event.target.value } : item))} maxLength={500} />
+                    {tasks.length > 1 && <button type="button" onClick={() => setTasks(tasks.filter((_, itemIndex) => itemIndex !== index))}>Удалить задание</button>}
                   </div>
                 ))}
-                {!editingLessonId && <button type="button" className="admin-secondary" onClick={() => setTasks([...tasks, emptyTask()])} disabled={tasks.length >= 30}>Add task</button>}
-                <button className="btn-primary green" type="submit">{editingLessonId ? 'Save lesson' : 'Create lesson'}</button>
-                {editingLessonId && <button type="button" className="admin-secondary" onClick={() => { setEditingLessonId(null); setLessonForm({ language: 'Python', lesson_number: '', title: '', subtitle: '', content: '', xp_reward: 50 }); }}>Cancel</button>}
+                {!editingLessonId && <button type="button" className="admin-secondary" onClick={() => setTasks([...tasks, emptyTask()])} disabled={tasks.length >= 30}>Добавить задание</button>}
+                <button className="btn-primary green" type="submit">{editingLessonId ? 'Сохранить урок' : 'Создать урок'}</button>
+                {editingLessonId && <button type="button" className="admin-secondary" onClick={() => { setEditingLessonId(null); setLessonForm({ language: 'Python', lesson_number: '', title: '', subtitle: '', content: '', xp_reward: 50 }); }}>Отмена</button>}
               </form>
               <div className="admin-list">
                 {lessons.map((lesson) => (
                   <article className="admin-row" key={lesson.id}>
-                    <div><strong>{lesson.title}</strong><span>{lesson.language} · Lesson {lesson.lesson_number} · {lesson.xp_reward} XP</span></div>
+                    <div><strong>{lesson.title}</strong><span>{lesson.language} · Урок {lesson.lesson_number} · {lesson.xp_reward} XP</span></div>
                     <div className="admin-actions">
-                      <button type="button" onClick={() => handleEditLesson(lesson)}>Edit</button>
-                      <button type="button" onClick={() => handleDeleteLesson(lesson)}>Delete</button>
+                      <button type="button" onClick={() => handleEditLesson(lesson)}>Изменить</button>
+                      <button type="button" onClick={() => handleDeleteLesson(lesson)}>Удалить</button>
                     </div>
                   </article>
                 ))}

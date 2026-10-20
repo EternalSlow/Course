@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import './style/style.css';
 import robot from './assets/robot.svg';
@@ -9,8 +9,8 @@ import LessonComplete from './LessonComplete';
 const FALLBACK_LESSON = {
   id: 3,
   number: 3,
-  title: 'Conditions',
-  subtitle: 'Make decisions in code',
+  title: 'Условия',
+  subtitle: 'Принимайте решения с помощью кода',
   xp_reward: 50,
 };
 
@@ -18,26 +18,26 @@ const FALLBACK_TASKS = [
   {
     id: 1,
     type: 'multiple_choice',
-    question: 'Which keyword is used to check a condition in Python?',
+    question: 'Какое ключевое слово проверяет условие в Python?',
     options: ['if', 'when', 'check', 'loop'],
     correct_answer: 'if',
-    explanation: 'The "if" keyword checks conditions in Python.',
+    explanation: 'Ключевое слово «if» проверяет условия в Python.',
   },
   {
     id: 2,
     type: 'multiple_choice',
-    question: 'What will this code print?\n\nif age > 18:\n    print("Adult")\n\nage = 20',
+    question: 'Что выведет этот код?\n\nif age > 18:\n    print("Adult")\n\nage = 20',
     options: ['Adult', 'Child', 'Nothing', 'Error'],
     correct_answer: 'Adult',
-    explanation: 'Since 20 > 18, the condition is True.',
+    explanation: 'Так как 20 > 18, условие истинно.',
   },
   {
     id: 3,
     type: 'multiple_choice',
-    question: 'Which is the correct Python syntax?',
+    question: 'Какой вариант записи на Python правильный?',
     options: ['if x > 5:', 'if (x > 5)', 'if x > 5 then:', 'when x > 5:'],
     correct_answer: 'if x > 5:',
-    explanation: 'Python uses "if condition:" with a colon.',
+    explanation: 'В Python после условия if ставится двоеточие.',
   },
 ];
 
@@ -45,16 +45,21 @@ const API_BASE = 'http://localhost:5000';
 
 export default function LessonTask() {
   const { id } = useParams(); // номер урока из URL
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const userId = user?.userId;
+  const practiceTaskId = Number(searchParams.get('practice'));
+  const practiceMode = Number.isSafeInteger(practiceTaskId) && practiceTaskId > 0;
 
   const [lesson, setLesson] = useState(FALLBACK_LESSON);
   const [tasks, setTasks] = useState(FALLBACK_TASKS);
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [feedback, setFeedback] = useState(null);
+  const [answerError, setAnswerError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [answerTrackingReady, setAnswerTrackingReady] = useState(false);
   const [completing, setCompleting] = useState(false); // загрузка завершения
   const [completed, setCompleted] = useState(false);
   const [completeData, setCompleteData] = useState(null); // данные для экрана завершения
@@ -67,11 +72,13 @@ export default function LessonTask() {
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
+    setAnswerTrackingReady(false);
     setLesson(FALLBACK_LESSON);
     setTasks(FALLBACK_TASKS);
     setCurrentTaskIndex(0);
     setSelectedAnswer(null);
     setFeedback(null);
+    setAnswerError('');
     setCompleting(false);
     setCompleted(false);
     setCompleteData(null);
@@ -86,13 +93,27 @@ export default function LessonTask() {
       return () => controller.abort();
     }
 
-    fetch(`${API_BASE}/api/user/${userId}/lesson/${id}/tasks`, { signal: controller.signal })
+    const taskUrl = practiceMode
+      ? `${API_BASE}/api/user/${userId}/practice/${practiceTaskId}`
+      : `${API_BASE}/api/user/${userId}/lesson/${id}/tasks`;
+    fetch(taskUrl, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error(`Unable to load lesson tasks (${res.status})`);
         return res.json();
       })
       .then(data => {
-        if (data.lesson && Array.isArray(data.tasks) && data.tasks.length > 0) {
+        if (practiceMode && data.lesson && data.task) {
+          setAnswerTrackingReady(true);
+          setLesson({
+            id: data.lesson.id,
+            number: data.lesson.number,
+            title: data.lesson.title,
+            subtitle: data.lesson.subtitle,
+            xp_reward: data.lesson.xp_reward,
+          });
+          setTasks([data.task]);
+        } else if (data.lesson && Array.isArray(data.tasks) && data.tasks.length > 0) {
+          setAnswerTrackingReady(true);
           setLesson({
             id: data.lesson.id,
             number: data.lesson.number,
@@ -108,22 +129,41 @@ export default function LessonTask() {
       .catch(err => {
         if (!controller.signal.aborted) {
           console.warn('Unable to load lesson tasks. Using fallback data.', err);
+          if (practiceMode) setTasks([]);
         }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [id, userId]);
+  }, [id, practiceMode, practiceTaskId, userId]);
 
   const currentTask = tasks[currentTaskIndex];
   const totalTasks = tasks.length;
   const progressPercent = (currentTaskIndex / totalTasks) * 100;
 
-  const handleCheck = () => {
+  const handleCheck = async () => {
     if (!selectedAnswer || !currentTask) return;
 
-    const isCorrect = selectedAnswer === currentTask.correct_answer;
+    setAnswerError('');
+    let isCorrect = selectedAnswer === currentTask.correct_answer;
+    if (userId && currentTask.id && answerTrackingReady) {
+      try {
+        const response = await fetch(`${API_BASE}/api/user/${userId}/task/${currentTask.id}/answer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answer: selectedAnswer }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Не удалось сохранить ответ');
+        isCorrect = data.correct;
+      } catch (requestError) {
+        setAnswerError(requestError instanceof TypeError
+          ? 'Не удалось сохранить ответ. Проверьте соединение и попробуйте ещё раз.'
+          : `Не удалось сохранить ответ. ${requestError.message}`);
+        if (practiceMode) return;
+      }
+    }
     console.log('✅ Проверка:', selectedAnswer, '===', currentTask.correct_answer, '→', isCorrect);
 
     setFeedback(isCorrect ? 'correct' : 'wrong');
@@ -147,6 +187,10 @@ export default function LessonTask() {
       setSelectedAnswer(null);
       setFeedback(null);
     } else {
+      if (practiceMode) {
+        setCompleted(true);
+        return;
+      }
       finishLesson();
     }
   };
@@ -184,12 +228,12 @@ export default function LessonTask() {
     }
 
     // 2. Загружаем данные следующего урока (для заголовка)
-    let nextLessonTitle = 'Next Lesson';
+    let nextLessonTitle = 'Следующий урок';
     try {
       const res = await fetch(`${API_BASE}/api/user/${userId}/lesson/${nextLessonNumber}`);
       if (res.ok) {
         const data = await res.json();
-        nextLessonTitle = data.title || `Lesson ${nextLessonNumber}`;
+        nextLessonTitle = data.title || `Урок ${nextLessonNumber}`;
       }
     } catch (err) {
       console.warn('⚠️ Не удалось загрузить следующий урок', err);
@@ -290,6 +334,20 @@ export default function LessonTask() {
     );
   }
 
+  if (completed && practiceMode) {
+    return (
+      <div className="lesson-complete page-container">
+        <div className="app-container">
+          <h1 className="complete-title">Отлично!</h1>
+          <p className="complete-subtitle">Вы ответили правильно. Вопрос удалён из списка повторения.</p>
+          <button className="btn-primary green" type="button" onClick={() => navigate('/practice')}>
+            Вернуться к практике
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Нет заданий
   if (!currentTask) {
     return (
@@ -306,7 +364,18 @@ export default function LessonTask() {
       <div className="app-container">
         {/* ШАПКА */}
         <div className="task-header">
-          <button className="close-btn" onClick={() => navigate('/lesson')}>
+          <button
+            className="close-btn"
+            aria-label="Закрыть урок"
+            onClick={() => {
+              const message = practiceMode
+                ? 'Выйти из повтора? Вопрос останется в списке.'
+                : 'Закрыть урок? Текущий прогресс не сохранится.';
+              if (window.confirm(message)) {
+                navigate('/lesson');
+              }
+            }}
+          >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#afafaf" strokeWidth="2.5">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
@@ -323,10 +392,10 @@ export default function LessonTask() {
         {/* МАСКОТ */}
         <div className="mascot-section">
           <div className="mascot">
-            <img src={robot} width="80" height={80} alt="Robot" />
+            <img src={robot} width="80" height={80} alt="Робот" />
           </div>
           <div className="mascot-bubble">
-            <p>{currentTask.explanation || "Let's practice!"}</p>
+            <p>{currentTask.explanation || 'Давайте попрактикуемся!'}</p>
           </div>
         </div>
 
@@ -366,18 +435,20 @@ export default function LessonTask() {
           })}
         </div>
 
+        {answerError && <p className="error-banner" role="alert">{answerError}</p>}
+
         {/* ОБРАТНАЯ СВЯЗЬ */}
         {feedback && (
           <div className={`task-feedback ${feedback}`}>
             <div className="feedback-header">
               <span className="feedback-icon">{feedback === 'correct' ? '✅' : '❌'}</span>
               <strong className="feedback-title">
-                {feedback === 'correct' ? 'Great job!' : 'Not quite right'}
+                {feedback === 'correct' ? 'Отлично!' : 'Почти получилось'}
               </strong>
             </div>
             {feedback === 'wrong' && (
               <p className="feedback-explanation">
-                Correct answer: <strong>{currentTask.correct_answer}</strong>
+                Правильный ответ: <strong>{currentTask.correct_answer}</strong>
               </p>
             )}
           </div>
@@ -393,7 +464,7 @@ export default function LessonTask() {
                 disabled={!selectedAnswer}
                 type="button"
               >
-                Check
+                Проверить
               </button>
             ) : (
               <button
@@ -401,7 +472,7 @@ export default function LessonTask() {
                 onClick={handleContinue}
                 type="button"
               >
-                Continue
+                Продолжить
               </button>
             )}
           </div>

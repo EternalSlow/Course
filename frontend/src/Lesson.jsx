@@ -56,20 +56,20 @@ const NavIcons = {
 };
 
 const navItems = [
-  { to: '/home',     icon: 'home',   label: 'home' },
-  { to: '/lesson',   icon: 'book',   label: 'Learn' },
-  { to: '/practice', icon: 'code',   label: 'Practice' },
-  { to: '/league',   icon: 'trophy', label: 'League' },
-  { to: '/profile',  icon: 'user',   label: 'Profile' },
+  { to: '/home',     icon: 'home',   label: 'Главная' },
+  { to: '/lesson',   icon: 'book',   label: 'Уроки' },
+  { to: '/practice', icon: 'code',   label: 'Практика' },
+  { to: '/league',   icon: 'trophy', label: 'Лига' },
+  { to: '/profile',  icon: 'user',   label: 'Профиль' },
 ];
 
 const FALLBACK_STEPS = [
-  { side: 'left',  status: 'completed', number: 1, title: 'Hello World', subtitle: 'Your first lines of code' },
-  { side: 'right', status: 'completed', number: 2, title: 'Variables',   subtitle: 'Give your data a name' },
-  { side: 'left',  status: 'active',    number: 3, title: 'Conditions',  subtitle: <><span className="next-tag">NEXT</span> · Lesson 3 of 6</> },
-  { side: 'right', status: 'locked',    number: 4, title: 'Loops',       subtitle: 'Repeat the good stuff' },
-  { side: 'left',  status: 'locked',    number: 5, title: 'Functions',   subtitle: 'Build reusable blocks' },
-  { side: 'right', status: 'locked',    number: 6, title: 'Arrays',      subtitle: 'Keep it all together' },
+  { side: 'left',  status: 'completed', number: 1, title: 'Привет, мир', subtitle: 'Ваш первый код' },
+  { side: 'right', status: 'completed', number: 2, title: 'Переменные', subtitle: 'Дайте данным имя' },
+  { side: 'left',  status: 'active',    number: 3, title: 'Условия', subtitle: <><span className="next-tag">ДАЛЕЕ</span> · Урок 3 из 6</> },
+  { side: 'right', status: 'locked',    number: 4, title: 'Циклы', subtitle: 'Повторяйте команды' },
+  { side: 'left',  status: 'locked',    number: 5, title: 'Функции', subtitle: 'Создавайте блоки кода' },
+  { side: 'right', status: 'locked',    number: 6, title: 'Массивы', subtitle: 'Храните данные вместе' },
 ];
 
 export default function Lesson() {
@@ -108,8 +108,8 @@ export default function Lesson() {
         subtitle: lesson.status === 'active'
           ? (
             <>
-              <span className="next-tag">NEXT</span>
-              {' · '}Lesson {lesson.lesson_number} of {total}
+              <span className="next-tag">ДАЛЕЕ</span>
+                {' · '}Урок {lesson.lesson_number} из {total}
             </>
           )
           : lesson.subtitle,
@@ -119,7 +119,7 @@ export default function Lesson() {
     } catch (e) {
       if (e.name === 'AbortError') return;
       console.error('Ошибка загрузки уроков:', e);
-      setError('Не удалось загрузить уроки. Показаны демо-данные.');
+      setError('Не удалось загрузить уроки. Показаны демонстрационные данные.');
     } finally {
       setLoading(false);
     }
@@ -161,10 +161,10 @@ export default function Lesson() {
   return (
     <div className="journey page-container">
       <div className="app-container">
-        <p className="course-tag">{language} Course</p>
+        <p className="course-tag">Курс {language}</p>
 
         <div className="header-row">
-          <h1 className="header-title">Your coding journey</h1>
+          <h1 className="header-title">Ваш путь в программировании</h1>
           <div className="header-action">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8a8fa3" strokeWidth="2.5">
               <circle cx="5" cy="12" r="1" />
@@ -182,8 +182,8 @@ export default function Lesson() {
 
         <div className="progress-card">
           <div className="progress-info">
-            <span className="progress-title">The foundations</span>
-            <span className="progress-text">{completedCount} / {totalCount} topics complete</span>
+            <span className="progress-title">Основы</span>
+            <span className="progress-text">{completedCount} / {totalCount} тем пройдено</span>
           </div>
           <div className="progress-bar-bg">
             <div
@@ -220,7 +220,7 @@ export default function Lesson() {
             <path d="M12 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="#afafaf" />
             <path d="M9 11h6V8a3 3 0 0 0-6 0v3z" fill="none" stroke="#afafaf" strokeWidth="2" />
           </svg>
-          <span>Finish the active lesson to unlock the next one.</span>
+          <span>Завершите текущий урок, чтобы открыть следующий.</span>
         </div>
 
         <nav className="bottom-nav">

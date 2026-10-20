@@ -15,13 +15,13 @@ export default function FirstPage() {
         <div className="page-container welcome-page">
           <div style={{ marginBottom: '8px' }}>
             <div className="page-title">Byte</div>
-            <div className="course-tag">SMALL LESSONS, BIG IDEAS.</div>
+            <div className="course-tag">МАЛЕНЬКИЕ УРОКИ — БОЛЬШИЕ ИДЕИ</div>
           </div>
 
           <div className="welcome-image-container">
             <img
               src={robot}
-              alt="Robot Icon"
+              alt="Робот"
               width={300}
               height={245}
             />
@@ -29,13 +29,12 @@ export default function FirstPage() {
 
           <div style={{ marginBottom: '40px' }}>
             <h2 className="page-title">
-              A little code.
+              Немного кода.
               <br />
-              A lot of possibility.
+              Много возможностей.
             </h2>
             <p className="description">
-              Learn Python &amp; JavaScript, one fun, bite-sized challenge at a
-              time.
+              Изучайте Python и JavaScript с помощью коротких и интересных заданий.
             </p>
           </div>
 
@@ -46,10 +45,10 @@ export default function FirstPage() {
               onClick={handleStart}
             >
               <span style={{ fontSize: '18px', marginRight: '-4px' }}>➔</span>
-              {"Let's start coding"}
+              Начать учиться
             </button>
             <Link to="/login" className="course-tag">
-              I already have an account
+              У меня уже есть аккаунт
             </Link>
           </div>
         </div>

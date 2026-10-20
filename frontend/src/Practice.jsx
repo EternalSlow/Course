@@ -1,7 +1,10 @@
 // Practice.jsx
 import './style/style.css';
-import { NavLink } from 'react-router-dom';
-import React, { useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from './AuthContext';
+
+const API_BASE = 'http://localhost:5000/api';
 
 const NavIcons = {
   home: (
@@ -41,82 +44,69 @@ const NavIcons = {
 };
 
 const navItems = [
-  { to: '/home',     icon: 'home',   label: 'Home' },
-  { to: '/lesson',   icon: 'book',   label: 'Learn' },
-  { to: '/practice', icon: 'code',   label: 'Practice' },
-  { to: '/league',   icon: 'trophy', label: 'League' },
-  { to: '/profile',  icon: 'user',   label: 'Profile' },
-];
-
-// Карточки практики — чтобы не дублировать разметку
-const practiceOptions = [
-  {
-    key: 'quick',
-    iconClass: 'orange',
-    stroke: '#f5a623',
-    title: 'Quick challenge',
-    subtitle: '5 questions · 3 min · +10 XP',
-    icon: (
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    ),
-  },
-  {
-    key: 'builder',
-    iconClass: 'blue',
-    stroke: '#5c6bc0',
-    title: 'Code builder',
-    subtitle: 'Arrange code blocks · 5 min · +15 XP',
-    icon: (
-      <>
-        <polyline points="16 18 22 12 16 6" />
-        <polyline points="8 6 2 12 8 18" />
-      </>
-    ),
-  },
-  {
-    key: 'mixed',
-    iconClass: 'purple',
-    stroke: '#9b59b6',
-    title: 'Mixed review',
-    subtitle: 'Hello World + Variables · +20 XP',
-    icon: (
-      <>
-        <polyline points="16 3 21 3 21 8" />
-        <line x1="4" y1="20" x2="21" y2="3" />
-        <polyline points="21 16 21 21 16 21" />
-        <line x1="15" y1="15" x2="21" y2="21" />
-        <line x1="4" y1="4" x2="9" y2="9" />
-      </>
-    ),
-  },
+  { to: '/home',     icon: 'home',   label: 'Главная' },
+  { to: '/lesson',   icon: 'book',   label: 'Уроки' },
+  { to: '/practice', icon: 'code',   label: 'Практика' },
+  { to: '/league',   icon: 'trophy', label: 'Лига' },
+  { to: '/profile',  icon: 'user',   label: 'Профиль' },
 ];
 
 export default function Practice() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [mistakes, setMistakes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   useEffect(() => {
     document.body.classList.add('practice');
     return () => document.body.classList.remove('practice');
   }, []);
+
+  useEffect(() => {
+    if (!user?.userId) return;
+    const controller = new AbortController();
+
+    fetch(`${API_BASE}/user/${user.userId}/practice`, { signal: controller.signal })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Не удалось загрузить вопросы для повторения');
+        if (!Array.isArray(data.mistakes)) throw new Error('Некорректный список вопросов');
+        setMistakes(data.mistakes);
+      })
+      .catch((loadError) => {
+        if (loadError.name !== 'AbortError') {
+          setError(loadError instanceof TypeError
+            ? 'Не удалось связаться с сервером. Проверьте соединение.'
+            : loadError.message);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [user?.userId]);
 
   return (
     <div className="practice page-container">
       <div className="app-container">
 
         {/* Section Tag */}
-        <p className="section-tag">Keep it fresh</p>
+        <p className="section-tag">Повторяйте и закрепляйте</p>
 
         {/* Header */}
         <div className="header-row">
-          <h1 className="header-title">A little practice pays off</h1>
+          <h1 className="header-title">Разберите ошибки</h1>
         </div>
 
         
 
         {/* Description */}
         <p className="description">
-          Build confidence with what you already know. Pick a mode and jump in.
+          Здесь собраны вопросы, на которые вы ответили неверно. Правильный ответ удалит вопрос из списка.
         </p>
 
-        {/* Mistake Review Card */}
         <div className="mistake-card">
           <div className="mistake-card-header">
             <div className="mistake-icon">
@@ -133,32 +123,36 @@ export default function Practice() {
               </svg>
             </div>
             <div>
-              <div className="mistake-title">Turn mistakes into wins</div>
-              <div className="mistake-subtitle">1 missed answer · Variables · +5 XP</div>
+              <div className="mistake-title">Вопросы для повторения</div>
+              <div className="mistake-subtitle">{mistakes.length} в списке</div>
             </div>
           </div>
-          <button type="button" className="btn-primary lime">Review my mistake</button>
         </div>
 
-        {/* Practice Modes */}
         <div className="cards-list">
-          {practiceOptions.map(({ key, iconClass, stroke, icon, title, subtitle }) => (
-            <div key={key} className="row-card">
-              <div className={`row-card-icon option-icon ${iconClass}`}>
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={stroke}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  {icon}
+          {loading && <p>Загрузка вопросов...</p>}
+          {error && <p role="alert">{error}</p>}
+          {!loading && !error && mistakes.length === 0 && (
+            <p className="practice-empty">
+              Пока нет вопросов для повторения. Неверные ответы из уроков появятся здесь.
+            </p>
+          )}
+          {!loading && !error && mistakes.map((mistake) => (
+            <button
+              key={mistake.taskId}
+              type="button"
+              className="row-card practice-question"
+              onClick={() => navigate(`/task/${mistake.lessonNumber}?practice=${mistake.taskId}`)}
+            >
+              <div className="row-card-icon option-icon purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#9b59b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
                 </svg>
               </div>
               <div className="row-card-info">
-                <div className="row-card-title">{title}</div>
-                <div className="row-card-subtitle">{subtitle}</div>
+                <div className="row-card-title">{mistake.lessonTitle}</div>
+                <div className="row-card-subtitle">{mistake.question}</div>
               </div>
               <div className="row-card-arrow">
                 <svg
@@ -172,14 +166,11 @@ export default function Practice() {
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
-        {/* Footer Message */}
-        <div className="footer-message">
-          No pressure. Every attempt makes you better.
-        </div>
+        <div className="footer-message">Ответьте правильно, чтобы убрать вопрос из списка.</div>
 
         {/* Bottom Navigation */}
         <nav className="bottom-nav">

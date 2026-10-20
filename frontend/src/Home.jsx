@@ -43,11 +43,11 @@ const NavIcons = {
 
 
 const navItems = [
-  { to: '/home',     icon: 'home',   label: 'home' },
-  { to: '/lesson',   icon: 'book',   label: 'Learn' },
-  { to: '/practice', icon: 'code',   label: 'Practice' },
-  { to: '/league',   icon: 'trophy', label: 'League' },
-  { to: '/profile',  icon: 'user',   label: 'Profile' },
+  { to: '/home',     icon: 'home',   label: 'Главная' },
+  { to: '/lesson',   icon: 'book',   label: 'Уроки' },
+  { to: '/practice', icon: 'code',   label: 'Практика' },
+  { to: '/league',   icon: 'trophy', label: 'Лига' },
+  { to: '/profile',  icon: 'user',   label: 'Профиль' },
 ];
 
 export default function Home() {
@@ -72,16 +72,16 @@ export default function Home() {
     const controller = new AbortController();
     fetch(`http://localhost:5000/api/user/${userId}`, { signal: controller.signal })
       .then((response) => {
-        if (!response.ok) throw new Error(`Unable to load profile (${response.status})`);
+        if (!response.ok)         throw new Error(`Не удалось загрузить профиль (${response.status})`);
         return response.json();
       })
       .then((data) => setProfileResult({ userId, data }))
       .catch((error) => {
         if (error.name !== 'AbortError') {
-          console.error('Unable to load profile:', error);
+          console.error('Не удалось загрузить профиль:', error);
           setProfileErrorResult({
             userId,
-            message: 'Your profile could not be loaded.',
+            message: 'Не удалось загрузить профиль.',
           });
         }
       });
@@ -99,11 +99,11 @@ export default function Home() {
         return response.json();
       })
       .then((data) => {
-        if (!Array.isArray(data.lessons)) throw new Error('Invalid lesson list');
+        if (!Array.isArray(data.lessons)) throw new Error('Некорректный список уроков');
         setCourseResult({ userId, data });
       })
       .catch((error) => {
-        if (error.name !== 'AbortError') console.error('Unable to load lessons:', error);
+        if (error.name !== 'AbortError') console.error('Не удалось загрузить уроки:', error);
       });
 
     return () => controller.abort();
@@ -132,36 +132,42 @@ export default function Home() {
       .catch(() => {});
   }, [user]);
 
-  const goalXP      = goal?.daily_xp      ?? 0;
-  const goalTarget  = goal?.daily_goal    ?? 50;
+  const dailyXP = Number(goal?.daily_xp ?? 0);
+  const dailyGoal = Number(goal?.daily_goal ?? 50);
+  const goalXP = Number.isFinite(dailyXP) ? Math.max(0, dailyXP) : 0;
+  const goalTarget = Number.isFinite(dailyGoal) && dailyGoal > 0 ? dailyGoal : 50;
   const goalPercent = Math.min(100, Math.round((goalXP / goalTarget) * 100));
   return (
     <div className="home page-container">
       <div className="app-container">
         {/* Greeting */}
-        <p className="course-tag">Good morning, {firstName}</p>
+        <p className="course-tag">Доброе утро, {firstName}</p>
 
         {/* Header */}
         <div className="header-row">
-          <h1 className="header-title">Ready for a little code?</h1>
-          {profile?.avatar ? (
-          <img
-            src={`http://localhost:5000${profile.avatar}`}
-            alt={firstName}
+          <h1 className="header-title">Готовы немного попрактиковаться?</h1>
+          <button
+            type="button"
             className="am-badge"
-            onError={() => {
-              setProfileResult((current) => current?.userId === userId
-                ? { ...current, data: { ...current.data, avatar: null } }
-                : current);
-              setProfileErrorResult({
-                userId,
-                message: 'Your profile picture could not be loaded.',
-              });
-            }}
-          />
-        ) : (
-          <div className="am-badge">{initials}</div>
-        )}
+            onClick={() => navigate('/profile')}
+            aria-label="Открыть профиль"
+          >
+            {profile?.avatar ? (
+              <img
+                src={`http://localhost:5000${profile.avatar}`}
+                alt=""
+                onError={() => {
+                  setProfileResult((current) => current?.userId === userId
+                    ? { ...current, data: { ...current.data, avatar: null } }
+                    : current);
+                  setProfileErrorResult({
+                    userId,
+                    message: 'Не удалось загрузить фото профиля.',
+                  });
+                }}
+              />
+            ) : initials}
+          </button>
         </div>
 
         {profileError && <p className="error-banner" role="alert">{profileError}</p>}
@@ -177,7 +183,7 @@ export default function Home() {
               </div>
               <span className="stat-value">{streak}</span>
             </div>
-            <span className="stat-label">Day streak</span>
+            <span className="stat-label">Дней подряд</span>
           </div>
           <div className="stat-card xp">
             <div className="stat-value-row">
@@ -188,32 +194,32 @@ export default function Home() {
               </div>
               <span className="stat-value">{totalXP}</span>
             </div>
-            <span className="stat-label">Total XP</span>
+            <span className="stat-label">Всего XP</span>
           </div>
         </div>
 
         {/* Today's Goal */}
         <div className="goal-card">
           <div className="goal-header">
-            <span className="goal-title">Today's goal</span>
+            <span className="goal-title">Цель на сегодня</span>
             <span className="goal-xp">{goalXP} / {goalTarget} XP</span>
           </div>
           <div className="progress-bar-bg">
             <div className="progress-bar-fill" style={{width: `${goalPercent}%` }} />
           </div>
-          <p className="goal-message">One more lesson keeps your momentum going.</p>
+          <p className="goal-message">Ещё один урок поможет сохранить темп.</p>
         </div>
 
         {/* Lesson Card */}
         <div className="lesson-card">
           <div className="lesson-top-row">
-            <span className="lesson-tag">{courseLanguage} · Beginner</span>
-            <span className="lesson-progress-text">{curLesson} / {totalLessons} topics</span>
+            <span className="lesson-tag">{courseLanguage} · Начальный уровень</span>
+            <span className="lesson-progress-text">{curLesson} / {totalLessons} тем</span>
           </div>
           <div className="lesson-content-row">
             <div className="lesson-info">
-              <h2 className="lesson-title">{activeLesson?.title || 'Make a decision'}</h2>
-              <p className="lesson-subtitle">{activeLesson?.subtitle || `Lesson ${curLesson} of ${totalLessons}`}</p>
+              <h2 className="lesson-title">{activeLesson?.title || 'Примите решение'}</h2>
+              <p className="lesson-subtitle">{activeLesson?.subtitle || `Урок ${curLesson} из ${totalLessons}`}</p>
             </div>
             <div className="lesson-robot">
               <img src={robot} width={72} height={72}/>
@@ -226,7 +232,7 @@ export default function Home() {
             <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
-            Continue learning
+            Продолжить обучение
           </button>
         </div>
 
@@ -239,8 +245,8 @@ export default function Home() {
             </svg>
           </div>
           <div className="row-card-info">
-            <p className="row-card-title">Keep your skills sharp</p>
-            <p className="row-card-subtitle">Review Hello World &amp; Variables</p>
+            <p className="row-card-title">Поддерживайте свои навыки</p>
+            <p className="row-card-subtitle">Повторите темы «Привет, мир» и «Переменные»</p>
           </div>
           <div className="row-card-arrow">
             <svg viewBox="0 0 24 24" fill="none" stroke="#c0c4d0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

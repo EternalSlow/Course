@@ -41,11 +41,11 @@ const NavIcons = {
 };
 
 const navItems = [
-  { to: '/home',     icon: 'home',   label: 'home' },
-  { to: '/lesson',   icon: 'book',   label: 'Learn' },
-  { to: '/practice', icon: 'code',   label: 'Practice' },
-  { to: '/league',   icon: 'trophy', label: 'League' },
-  { to: '/profile',  icon: 'user',   label: 'Profile' },
+  { to: '/home',     icon: 'home',   label: 'Главная' },
+  { to: '/lesson',   icon: 'book',   label: 'Уроки' },
+  { to: '/practice', icon: 'code',   label: 'Практика' },
+  { to: '/league',   icon: 'trophy', label: 'Лига' },
+  { to: '/profile',  icon: 'user',   label: 'Профиль' },
 ];
 
 export default function Profile() {
@@ -67,7 +67,7 @@ export default function Profile() {
       .catch(() => setError('Не удалось загрузить профиль'));
   }, [user]);
 
-  const displayName = profile?.username || user?.username || 'User';
+  const displayName = profile?.username || user?.username || 'Пользователь';
   const initials = displayName.slice(0, 2).toUpperCase();
   const email = profile?.email || '';
   const language = profile?.language || 'Python';
@@ -82,12 +82,12 @@ export default function Profile() {
       <div className="app-container">
         {/* Page Header */}
         <div className="page-header">
-          <h1 className="page-title">Your profile</h1>
-          <button className="header-action settings-button" type="button" onClick={() => navigate('/settings')} title="Settings" aria-label="Settings">
+          <h1 className="page-title">Ваш профиль</h1>
+          <button className="header-action settings-button" type="button" onClick={() => navigate('/settings')} title="Настройки" aria-label="Настройки">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                  strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3.5" />
-              <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4m0-13.4-1.4 1.4m-10.6 10.6-1.4 1.4" />
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 3v3m0 12v3M3 12h3m12 0h3" />
             </svg>
           </button>
         </div>
@@ -104,7 +104,7 @@ export default function Profile() {
           <div className="profile-details">
             <div className="profile-name">{displayName}</div>
             <div className="profile-username">{email}</div>
-            <div className="profile-badge">{language} explorer</div>
+            <div className="profile-badge">Изучает {language}</div>
           </div>
         </div>
 
@@ -112,15 +112,15 @@ export default function Profile() {
         <div className="stats-row">
           <div className="stat-card">
             <div className="stat-value">{xp.toLocaleString()}</div>
-            <div className="stat-label">Total XP</div>
+            <div className="stat-label">Всего XP</div>
           </div>
           <div className="stat-card">
             <div className="stat-value">{streak}</div>
-            <div className="stat-label">Day streak</div>
+            <div className="stat-label">Дней подряд</div>
           </div>
           <div className="stat-card">
             <div className="stat-value">{profile?.rank ? `#${profile.rank}` : '—'}</div>
-            <div className="stat-label">Club rank</div>
+            <div className="stat-label">Место в лиге</div>
           </div>
         </div>
 
@@ -132,21 +132,21 @@ export default function Profile() {
                 <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
               </svg>
             </div>
-            <div className="streak-title">{streak} day{streak === 1 ? '' : 's'} in a row</div>
+            <div className="streak-title">{streak} {streak === 1 ? 'день' : streak < 5 ? 'дня' : 'дней'} подряд</div>
           </div>
-          <p className="profile-username">Complete a lesson today to keep your streak going.</p>
+          <p className="profile-username">Пройдите урок сегодня, чтобы сохранить серию.</p>
         </div>
 
         {/* Progress Card */}
         <div className="progress-card">
           <div className="progress-header">
-            <div className="progress-title">{language} foundations</div>
+            <div className="progress-title">Основы {language}</div>
             <div className="progress-percent">{progress}%</div>
           </div>
           <div className="progress-bar-bg">
             <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
           </div>
-          <div className="progress-subtitle">{completedLessons} / {totalLessons} topics complete</div>
+          <div className="progress-subtitle">{completedLessons} / {totalLessons} тем пройдено</div>
         </div>
 
         {/* Bottom Navigation */}

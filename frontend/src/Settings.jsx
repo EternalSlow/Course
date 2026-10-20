@@ -25,14 +25,14 @@ export default function Settings() {
     if (!user?.userId) return;
     fetch(`${API_BASE}/user/${user.userId}`)
       .then((response) => {
-        if (!response.ok) throw new Error('Unable to load settings');
+        if (!response.ok) throw new Error('Не удалось загрузить настройки');
         return response.json();
       })
       .then((profile) => {
         setUsername(profile.username || '');
         setLanguage(profile.language || 'Python');
       })
-      .catch(() => setError('Unable to load your settings.'))
+      .catch(() => setError('Не удалось загрузить настройки.'))
       .finally(() => setLoading(false));
   }, [user?.userId]);
 
@@ -49,7 +49,7 @@ export default function Settings() {
         body: JSON.stringify({ username }),
       });
       const profileData = await profileResponse.json();
-      if (!profileResponse.ok) throw new Error(profileData.error || 'Unable to update your name.');
+      if (!profileResponse.ok) throw new Error(profileData.error || 'Не удалось изменить имя.');
 
       const languageResponse = await fetch(`${API_BASE}/user/${user.userId}/language`, {
         method: 'POST',
@@ -57,7 +57,7 @@ export default function Settings() {
         body: JSON.stringify({ language }),
       });
       const languageData = await languageResponse.json();
-      if (!languageResponse.ok) throw new Error(languageData.error || 'Unable to update your language.');
+      if (!languageResponse.ok) throw new Error(languageData.error || 'Не удалось изменить язык.');
 
       if (avatar) {
         const formData = new FormData();
@@ -67,14 +67,16 @@ export default function Settings() {
           body: formData,
         });
         const avatarData = await avatarResponse.json();
-        if (!avatarResponse.ok) throw new Error(avatarData.error || 'Unable to update your icon.');
+        if (!avatarResponse.ok) throw new Error(avatarData.error || 'Не удалось изменить аватар.');
       }
 
       login({ ...user, username: profileData.username });
       setAvatar(null);
       setSaved(true);
     } catch (saveError) {
-      setError(saveError.message || 'Unable to save your settings.');
+      setError(saveError instanceof TypeError
+        ? 'Не удалось связаться с сервером. Проверьте соединение.'
+        : saveError.message || 'Не удалось сохранить настройки.');
     } finally {
       setSaving(false);
     }
@@ -88,13 +90,13 @@ export default function Settings() {
   return (
     <div className="settings page-container">
       <div className="app-container settings-content">
-        <Link className="settings-back" to="/profile">← Profile</Link>
-        <h1 className="header-title">Settings</h1>
+        <Link className="settings-back" to="/profile">← Профиль</Link>
+        <h1 className="header-title">Настройки</h1>
 
-        {loading ? <p>Loading settings...</p> : (
+        {loading ? <p>Загрузка настроек...</p> : (
           <form className="settings-form" onSubmit={handleSave}>
             <label className="settings-field">
-              <span>Name</span>
+              <span>Имя</span>
               <input
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
@@ -106,7 +108,7 @@ export default function Settings() {
             </label>
 
             <label className="settings-field">
-              <span>Programming language</span>
+              <span>Язык программирования</span>
               <select value={language} onChange={(event) => setLanguage(event.target.value)}>
                 <option value="Python">Python</option>
                 <option value="JavaScript">JavaScript</option>
@@ -114,7 +116,7 @@ export default function Settings() {
             </label>
 
             <label className="settings-field">
-              <span>Your icon</span>
+              <span>Аватар</span>
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/gif"
@@ -123,16 +125,16 @@ export default function Settings() {
             </label>
 
             {error && <p className="settings-error" role="alert">{error}</p>}
-            {saved && <p className="settings-success" role="status">Settings saved.</p>}
+            {saved && <p className="settings-success" role="status">Настройки сохранены.</p>}
 
             <button className="btn-primary green" type="submit" disabled={saving}>
-              {saving ? 'Saving...' : 'Save settings'}
+              {saving ? 'Сохраняем...' : 'Сохранить настройки'}
             </button>
           </form>
         )}
 
         <button className="settings-logout" type="button" onClick={handleLogout}>
-          Log out
+          Выйти
         </button>
       </div>
     </div>
