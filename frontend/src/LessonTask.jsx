@@ -399,8 +399,12 @@ export default function LessonTask() {
           </div>
         </div>
 
-        {/* КОД (если есть переносы в вопросе) */}
-        {currentTask.question.includes('\n') ? (
+        {currentTask.code && (
+          <div className="code-block">
+            <pre>{currentTask.code}</pre>
+          </div>
+        )}
+        {currentTask.question.includes('\n') && !currentTask.code ? (
           <div className="code-block">
             <pre>{currentTask.question}</pre>
           </div>

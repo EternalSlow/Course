@@ -21,6 +21,15 @@ const languages = [
     level: 'Для начинающих',
     description: 'Добавьте интерактивности сайтам и создавайте новые возможности в интернете.',
   },
+  {
+    id: 'typescript',
+    name: 'TypeScript',
+    icon: 'TS',
+    iconClass: 'language-icon-ts',
+    topics: '6 тем',
+    level: 'Для начинающих',
+    description: 'Изучите типы и создавайте более надёжные приложения на JavaScript.',
+  },
 ];
 
 const topics = ['Привет, мир', 'Переменные', 'Условия', 'Циклы', 'Функции', 'Массивы'];

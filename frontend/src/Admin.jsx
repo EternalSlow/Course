@@ -4,7 +4,6 @@ import { useAuth } from './AuthContext';
 import './style/style.css';
 
 const API_BASE = 'http://localhost:5000/api';
-const emptyTask = () => ({ question: '', correct_answer: '', options: '', explanation: '' });
 
 async function adminApi(token, path, options = {}) {
   const headers = { Authorization: `Bearer ${token}`, ...options.headers };
@@ -24,12 +23,6 @@ export default function Admin() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [userForm, setUserForm] = useState({ username: '', email: '', password: '' });
-  const [lessonForm, setLessonForm] = useState({
-    language: 'Python', lesson_number: '', title: '', subtitle: '', content: '', xp_reward: 50,
-  });
-  const [tasks, setTasks] = useState([emptyTask()]);
-  const [editingLessonId, setEditingLessonId] = useState(null);
-
   const loadData = useCallback(async () => {
     const [userData, lessonData] = await Promise.all([
       adminApi(user?.token, '/admin/users'),
@@ -153,43 +146,6 @@ export default function Admin() {
     }
   };
 
-  const handleLessonSubmit = async (event) => {
-    event.preventDefault();
-    setError('');
-    const payload = { ...lessonForm };
-    if (!editingLessonId) {
-      payload.tasks = tasks.map((task) => ({
-        ...task,
-        options: task.options.split(',').map((option) => option.trim()).filter(Boolean),
-      }));
-    }
-    try {
-      await adminApi(user?.token, editingLessonId ? `/admin/lessons/${editingLessonId}` : '/admin/lessons', {
-        method: editingLessonId ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      setEditingLessonId(null);
-      setLessonForm({ language: 'Python', lesson_number: '', title: '', subtitle: '', content: '', xp_reward: 50 });
-      setTasks([emptyTask()]);
-      await loadData();
-    } catch (lessonError) {
-      setError(lessonError.message);
-    }
-  };
-
-  const handleEditLesson = (lesson) => {
-    setEditingLessonId(lesson.id);
-    setLessonForm({
-      language: lesson.language,
-      lesson_number: lesson.lesson_number,
-      title: lesson.title,
-      subtitle: lesson.subtitle || '',
-      content: lesson.content || '',
-      xp_reward: lesson.xp_reward,
-    });
-  };
-
   const handleDeleteLesson = async (lesson) => {
     if (!window.confirm(`Удалить урок «${lesson.title}»?`)) return;
     setError('');
@@ -261,38 +217,16 @@ export default function Admin() {
             </section>
 
             <section className="admin-section">
-              <h2>{editingLessonId ? 'Изменить урок' : 'Создать урок'}</h2>
-              <form className="admin-form" onSubmit={handleLessonSubmit}>
-                <div className="admin-form-row">
-                  <select value={lessonForm.language} onChange={(event) => setLessonForm({ ...lessonForm, language: event.target.value })} disabled={Boolean(editingLessonId)}>
-                    <option>Python</option><option>JavaScript</option>
-                  </select>
-                  <input type="number" min="1" placeholder="Номер урока" value={lessonForm.lesson_number} onChange={(event) => setLessonForm({ ...lessonForm, lesson_number: Number(event.target.value) })} disabled={Boolean(editingLessonId)} required />
-                </div>
-                <input placeholder="Название урока" value={lessonForm.title} onChange={(event) => setLessonForm({ ...lessonForm, title: event.target.value })} maxLength={100} required />
-                <input placeholder="Подзаголовок" value={lessonForm.subtitle} onChange={(event) => setLessonForm({ ...lessonForm, subtitle: event.target.value })} maxLength={180} />
-                <textarea placeholder="Содержание урока" value={lessonForm.content} onChange={(event) => setLessonForm({ ...lessonForm, content: event.target.value })} maxLength={5000} />
-                <label className="admin-inline-field">Награда XP<input type="number" min="0" value={lessonForm.xp_reward} onChange={(event) => setLessonForm({ ...lessonForm, xp_reward: Number(event.target.value) })} /></label>
-                {!editingLessonId && tasks.map((task, index) => (
-                  <div className="admin-task" key={index}>
-                    <h3>Задание {index + 1}</h3>
-                    <textarea placeholder="Вопрос" value={task.question} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, question: event.target.value } : item))} maxLength={1000} required />
-                    <input placeholder="Варианты через запятую (от 2 до 6)" value={task.options} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, options: event.target.value } : item))} maxLength={1540} required />
-                    <input placeholder="Правильный ответ" value={task.correct_answer} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, correct_answer: event.target.value } : item))} maxLength={300} required />
-                    <input placeholder="Объяснение" value={task.explanation} onChange={(event) => setTasks(tasks.map((item, itemIndex) => itemIndex === index ? { ...item, explanation: event.target.value } : item))} maxLength={500} />
-                    {tasks.length > 1 && <button type="button" onClick={() => setTasks(tasks.filter((_, itemIndex) => itemIndex !== index))}>Удалить задание</button>}
-                  </div>
-                ))}
-                {!editingLessonId && <button type="button" className="admin-secondary" onClick={() => setTasks([...tasks, emptyTask()])} disabled={tasks.length >= 30}>Добавить задание</button>}
-                <button className="btn-primary green" type="submit">{editingLessonId ? 'Сохранить урок' : 'Создать урок'}</button>
-                {editingLessonId && <button type="button" className="admin-secondary" onClick={() => { setEditingLessonId(null); setLessonForm({ language: 'Python', lesson_number: '', title: '', subtitle: '', content: '', xp_reward: 50 }); }}>Отмена</button>}
-              </form>
+              <h2>Уроки</h2>
+              <button className="btn-primary green" type="button" onClick={() => navigate('/admin/lessons/new')}>
+                Создать урок
+              </button>
               <div className="admin-list">
                 {lessons.map((lesson) => (
                   <article className="admin-row" key={lesson.id}>
                     <div><strong>{lesson.title}</strong><span>{lesson.language} · Урок {lesson.lesson_number} · {lesson.xp_reward} XP</span></div>
                     <div className="admin-actions">
-                      <button type="button" onClick={() => handleEditLesson(lesson)}>Изменить</button>
+                      <button type="button" onClick={() => navigate(`/admin/lessons/${lesson.id}/edit`)}>Изменить</button>
                       <button type="button" onClick={() => handleDeleteLesson(lesson)}>Удалить</button>
                     </div>
                   </article>

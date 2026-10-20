@@ -55,6 +55,7 @@ export default function Practice() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [mistakes, setMistakes] = useState([]);
+  const [lastCompletedLesson, setLastCompletedLesson] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -67,12 +68,29 @@ export default function Practice() {
     if (!user?.userId) return;
     const controller = new AbortController();
 
-    fetch(`${API_BASE}/user/${user.userId}/practice`, { signal: controller.signal })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Не удалось загрузить вопросы для повторения');
-        if (!Array.isArray(data.mistakes)) throw new Error('Некорректный список вопросов');
-        setMistakes(data.mistakes);
+    Promise.all([
+      fetch(`${API_BASE}/user/${user.userId}/practice`, { signal: controller.signal }),
+      fetch(`${API_BASE}/user/${user.userId}/lessons`, { signal: controller.signal }),
+    ])
+      .then(async ([practiceResponse, lessonsResponse]) => {
+        const [practiceData, lessonsData] = await Promise.all([
+          practiceResponse.json(),
+          lessonsResponse.json(),
+        ]);
+        if (!practiceResponse.ok) {
+          throw new Error(practiceData.error || 'Не удалось загрузить вопросы для повторения');
+        }
+        if (!lessonsResponse.ok) {
+          throw new Error(lessonsData.error || 'Не удалось загрузить список уроков');
+        }
+        if (!Array.isArray(practiceData.mistakes) || !Array.isArray(lessonsData.lessons)) {
+          throw new Error('Сервер вернул некорректные данные');
+        }
+        setMistakes(practiceData.mistakes);
+        const completedLessons = lessonsData.lessons.filter((lesson) => lesson.status === 'completed');
+        setLastCompletedLesson(
+          completedLessons.sort((first, second) => second.lesson_number - first.lesson_number)[0] || null
+        );
       })
       .catch((loadError) => {
         if (loadError.name !== 'AbortError') {
@@ -106,6 +124,19 @@ export default function Practice() {
         <p className="description">
           Здесь собраны вопросы, на которые вы ответили неверно. Правильный ответ удалит вопрос из списка.
         </p>
+
+        <button
+          className="practice-last-lesson"
+          type="button"
+          disabled={loading || !lastCompletedLesson}
+          onClick={() => navigate(`/task/${lastCompletedLesson.lesson_number}?review=true`)}
+        >
+          {loading
+            ? 'Загрузка уроков...'
+            : lastCompletedLesson
+              ? `Повторить последний урок: ${lastCompletedLesson.title}`
+              : 'Завершите урок, чтобы открыть повторение'}
+        </button>
 
         <div className="mistake-card">
           <div className="mistake-card-header">

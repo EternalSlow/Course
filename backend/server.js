@@ -67,6 +67,7 @@ db.serialize(() => {
     task_number INTEGER NOT NULL,
     type TEXT NOT NULL,
     question TEXT NOT NULL,
+    code TEXT,
     options TEXT,
     correct_answer TEXT NOT NULL,
     explanation TEXT,
@@ -235,6 +236,78 @@ db.get(`SELECT COUNT(*) AS count FROM lessons`, (err, row) => {
   });
 });
 
+const TYPESCRIPT_LESSONS = [
+  [1, 'Hello TypeScript', 'Write your first typed command', 10],
+  [2, 'Variables and types', 'Give values clear types', 30],
+  [3, 'Basic types', 'Use strings, numbers and booleans', 50],
+  [4, 'Conditions', 'Choose actions with conditions', 50],
+  [5, 'Loops', 'Repeat actions with a loop', 50],
+  [6, 'Functions', 'Write functions with typed inputs', 50],
+];
+
+const TYPESCRIPT_TASKS = [
+  { lesson: 1, number: 1, code: `console.log('Hello, TypeScript!');`, question: 'Which command writes text to the console?', options: ['console.log()', 'print()', 'echo()', 'write()'], answer: 'console.log()', explanation: 'console.log() writes a value to the console.' },
+  { lesson: 1, number: 2, code: `console.log(2 + 3);`, question: 'What value does this code write to the console?', options: ['5', '23', '2 + 3', 'Nothing'], answer: '5', explanation: 'The plus operator adds the two numbers.' },
+  { lesson: 2, number: 1, code: `const score: number = 10;`, question: 'What does the type annotation number show?', options: ['score stores a number', 'score is a function', 'score stores text', 'score cannot have a value'], answer: 'score stores a number', explanation: 'The annotation after the colon states the variable type.' },
+  { lesson: 2, number: 2, code: `const userName: string = 'Ada';`, question: 'Which type matches the value Ada?', options: ['string', 'number', 'boolean', 'void'], answer: 'string', explanation: 'Text values use the string type.' },
+  { lesson: 3, number: 1, code: `let isReady: boolean = true;`, question: 'Which values can a boolean store?', options: ['true or false', 'text only', 'whole numbers only', 'arrays only'], answer: 'true or false', explanation: 'A boolean value is true or false.' },
+  { lesson: 3, number: 2, code: `let count: number = 4;`, question: 'Which type is used for count?', options: ['number', 'string', 'boolean', 'object'], answer: 'number', explanation: 'The annotation defines count as a number.' },
+  { lesson: 4, number: 1, code: `const age: number = 20;\nif (age >= 18) {\n  console.log('Adult');\n}`, question: 'What does the condition check?', options: ['Whether age is at least 18', 'Whether age is text', 'Whether age is less than 18', 'Whether age is undefined'], answer: 'Whether age is at least 18', explanation: 'The >= operator checks if the left value is greater than or equal to the right value.' },
+  { lesson: 4, number: 2, code: `const isOpen: boolean = false;\nif (!isOpen) {\n  console.log('Closed');\n}`, question: 'What does the ! operator do here?', options: ['It changes false to true', 'It adds two values', 'It declares a type', 'It repeats the code'], answer: 'It changes false to true', explanation: 'The ! operator means NOT.' },
+  { lesson: 5, number: 1, code: `for (let i: number = 0; i < 3; i++) {\n  console.log(i);\n}`, question: 'Which values does this loop write?', options: ['0, 1, 2', '1, 2, 3', '0, 1, 2, 3', '3 only'], answer: '0, 1, 2', explanation: 'The loop stops when i is no longer less than 3.' },
+  { lesson: 5, number: 2, code: `for (let i: number = 0; i < 2; i++) {\n  console.log('Hi');\n}`, question: 'How many times does this loop write Hi?', options: ['2', '1', '3', '0'], answer: '2', explanation: 'The values of i are 0 and 1, so the loop runs twice.' },
+  { lesson: 6, number: 1, code: `function greet(name: string): string {\n  return 'Hello, ' + name;\n}`, question: 'What does the type after the parentheses describe?', options: ['The return value type', 'The name type', 'The function name', 'The number of calls'], answer: 'The return value type', explanation: 'The string after the parentheses says that the function returns text.' },
+  { lesson: 6, number: 2, code: `function double(value: number): number {\n  return value * 2;\n}`, question: 'Which type must value use?', options: ['number', 'string', 'boolean', 'void'], answer: 'number', explanation: 'The function declares value as a number.' },
+];
+
+function seedTypeScriptCourse(callback) {
+  const lessonStatement = db.prepare(
+    `INSERT OR IGNORE INTO lessons (language, lesson_number, title, subtitle, status, xp_reward)
+     VALUES ('TypeScript', ?, ?, ?, 'locked', ?)`
+  );
+  let firstError = null;
+  TYPESCRIPT_LESSONS.forEach((lesson) => {
+    lessonStatement.run(...lesson, (error) => { if (error && !firstError) firstError = error; });
+  });
+  lessonStatement.finalize((lessonFinalizeError) => {
+    if (lessonFinalizeError || firstError) return callback(lessonFinalizeError || firstError);
+    const taskStatement = db.prepare(
+      `INSERT INTO tasks
+         (lesson_id, task_number, type, question, code, options, correct_answer, explanation)
+       SELECT lessons.id, ?, 'multiple_choice', ?, ?, ?, ?, ?
+       FROM lessons
+       WHERE lessons.language = 'TypeScript' AND lessons.lesson_number = ?
+         AND NOT EXISTS (
+           SELECT 1 FROM tasks
+           WHERE tasks.lesson_id = lessons.id AND tasks.task_number = ?
+         )`
+    );
+    firstError = null;
+    TYPESCRIPT_TASKS.forEach((task) => {
+      taskStatement.run(
+        task.number,
+        task.question,
+        task.code,
+        JSON.stringify(task.options),
+        task.answer,
+        task.explanation,
+        task.lesson,
+        task.number,
+        (error) => { if (error && !firstError) firstError = error; }
+      );
+    });
+    taskStatement.finalize((taskFinalizeError) => {
+      if (taskFinalizeError || firstError) return callback(taskFinalizeError || firstError);
+      db.run(
+        `UPDATE users
+         SET total_lessons = (SELECT COUNT(*) FROM lessons WHERE lessons.language = 'TypeScript')
+         WHERE language = 'TypeScript'`,
+        callback
+      );
+    });
+  });
+}
+
 const SECRET_KEY = 'your-super-secret-key';
 
 function bootstrapAdmin(onReady) {
@@ -266,7 +339,7 @@ function bootstrapAdmin(onReady) {
         });
       }
 
-      db.get(`SELECT id FROM users WHERE is_admin = 1 LIMIT 1`, async (adminError, admin) => {
+      const ensureAdmin = () => db.get(`SELECT id FROM users WHERE is_admin = 1 LIMIT 1`, async (adminError, admin) => {
         if (adminError || admin) {
           if (adminError) console.error('Unable to check admin account:', adminError.message);
           return onReady();
@@ -298,6 +371,21 @@ function bootstrapAdmin(onReady) {
           console.error('Unable to create admin password:', hashError.message);
           onReady();
         }
+      });
+
+      db.all(`PRAGMA table_info(tasks)`, (taskSchemaError, taskColumns) => {
+        if (taskSchemaError) {
+          console.error('Unable to check task schema:', taskSchemaError.message);
+          return onReady();
+        }
+        if (taskColumns.some((column) => column.name === 'code')) return ensureAdmin();
+        db.run(`ALTER TABLE tasks ADD COLUMN code TEXT`, (migrationError) => {
+          if (migrationError) {
+            console.error('Unable to update task schema:', migrationError.message);
+            return onReady();
+          }
+          ensureAdmin();
+        });
       });
     };
 
@@ -364,7 +452,7 @@ app.get('/api/user/:id/practice/:taskId', (req, res) => {
   db.get(
     `SELECT lessons.id AS lessonId, lessons.lesson_number AS number,
        lessons.title, lessons.subtitle, lessons.xp_reward,
-       tasks.id, tasks.type, tasks.question, tasks.options,
+       tasks.id, tasks.type, tasks.question, tasks.code, tasks.options,
        tasks.correct_answer, tasks.explanation
      FROM user_mistakes
      JOIN tasks ON tasks.id = user_mistakes.task_id
@@ -376,11 +464,11 @@ app.get('/api/user/:id/practice/:taskId', (req, res) => {
       if (!row) return res.status(404).json({ error: 'Вопрос для повторения не найден' });
       const {
         lessonId, number, title, subtitle, xp_reward,
-        id, type, question, options, correct_answer, explanation,
+        id, type, question, code, options, correct_answer, explanation,
       } = row;
       res.json({
         lesson: { id: lessonId, number, title, subtitle, xp_reward },
-        task: { id, type, question, options: options ? JSON.parse(options) : [], correct_answer, explanation },
+        task: { id, type, question, code, options: options ? JSON.parse(options) : [], correct_answer, explanation },
       });
     }
   );
@@ -488,6 +576,9 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/user/:id/language', (req, res) => {
   const { language } = req.body;
   const { id } = req.params;
+  if (!['Python', 'JavaScript', 'TypeScript'].includes(language)) {
+    return res.status(400).json({ error: 'Неподдерживаемый язык программирования' });
+  }
   db.run(
     `UPDATE users SET language = ? WHERE id = ?`,
     [language, id],
@@ -856,10 +947,32 @@ app.get('/api/admin/lessons', requireAdmin, requireChangedAdminPassword, (_req, 
   });
 });
 
+app.get('/api/admin/lessons/:id', requireAdmin, requireChangedAdminPassword, (req, res) => {
+  db.get(`SELECT * FROM lessons WHERE id = ?`, [req.params.id], (lessonError, lesson) => {
+    if (lessonError) return res.status(500).json({ error: 'Не удалось загрузить урок' });
+    if (!lesson) return res.status(404).json({ error: 'Урок не найден' });
+    db.all(
+      `SELECT id, type, question, code, options, correct_answer, explanation
+       FROM tasks WHERE lesson_id = ? ORDER BY task_number`,
+      [lesson.id],
+      (taskError, tasks) => {
+        if (taskError) return res.status(500).json({ error: 'Не удалось загрузить задания урока' });
+        res.json({
+          lesson,
+          tasks: tasks.map((task) => ({
+            ...task,
+            options: task.options ? JSON.parse(task.options) : [],
+          })),
+        });
+      }
+    );
+  });
+});
+
 function saveLessonTasks(lessonId, tasks, callback) {
   const statement = db.prepare(
-    `INSERT INTO tasks (lesson_id, task_number, type, question, options, correct_answer, explanation)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO tasks (lesson_id, task_number, type, question, code, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   );
   let firstError = null;
   tasks.forEach((task, index) => {
@@ -868,6 +981,7 @@ function saveLessonTasks(lessonId, tasks, callback) {
       index + 1,
       task.type || 'multiple_choice',
       task.question,
+      task.code || '',
       JSON.stringify(task.options || []),
       task.correct_answer,
       task.explanation || '',
@@ -882,6 +996,7 @@ const LESSON_TEXT_LIMITS = {
   subtitle: 180,
   content: 5000,
   question: 1000,
+  code: 2000,
   correctAnswer: 300,
   option: 250,
   explanation: 500,
@@ -906,39 +1021,46 @@ function isOptionalText(value) {
   return value == null || typeof value === 'string';
 }
 
-app.post('/api/admin/lessons', requireAdmin, requireChangedAdminPassword, (req, res) => {
-  const { language, lesson_number, title, subtitle, content, xp_reward, tasks } = req.body;
-  const cleanTitle = sanitizePlainText(title);
-  const cleanSubtitle = sanitizePlainText(subtitle);
-  const cleanContent = sanitizePlainText(content, true);
-  const validTaskInputs = Array.isArray(tasks) && tasks.every((task) =>
+function normalizeLessonTasks(tasks) {
+  const validInputs = Array.isArray(tasks) && tasks.every((task) =>
     task && typeof task === 'object' && !Array.isArray(task) &&
     typeof task.question === 'string' && typeof task.correct_answer === 'string' &&
-    isOptionalText(task.type) && isOptionalText(task.explanation) &&
+    isOptionalText(task.code) && isOptionalText(task.type) && isOptionalText(task.explanation) &&
     Array.isArray(task.options) && task.options.every((option) => typeof option === 'string')
   );
   const cleanTasks = Array.isArray(tasks) ? tasks.map((task) => ({
     type: typeof task?.type === 'string' ? sanitizePlainText(task.type) : 'multiple_choice',
     question: sanitizePlainText(task?.question, true),
+    code: sanitizePlainText(task?.code, true),
     correct_answer: sanitizePlainText(task?.correct_answer),
     explanation: sanitizePlainText(task?.explanation, true),
     options: Array.isArray(task?.options) ? task.options.map((option) => sanitizePlainText(option, true)) : [],
   })) : [];
-  const xpReward = Number(xp_reward ?? 0);
-  const validTasks = validTaskInputs && cleanTasks.length > 0 && cleanTasks.length <= 30 && cleanTasks.every((task) =>
+  const valid = validInputs && cleanTasks.length > 0 && cleanTasks.length <= 30 && cleanTasks.every((task) =>
     isTextWithinLimit(task.question, LESSON_TEXT_LIMITS.question) && task.question &&
+    isTextWithinLimit(task.code, LESSON_TEXT_LIMITS.code) &&
     isTextWithinLimit(task.correct_answer, LESSON_TEXT_LIMITS.correctAnswer) && task.correct_answer &&
     isTextWithinLimit(task.explanation, LESSON_TEXT_LIMITS.explanation) &&
     task.options.length >= 2 && task.options.length <= 6 &&
     task.options.every((option) => isTextWithinLimit(option, LESSON_TEXT_LIMITS.option) && option) &&
     task.options.includes(task.correct_answer)
   );
+  return valid ? cleanTasks : null;
+}
+
+app.post('/api/admin/lessons', requireAdmin, requireChangedAdminPassword, (req, res) => {
+  const { language, lesson_number, title, subtitle, content, xp_reward, tasks } = req.body;
+  const cleanTitle = sanitizePlainText(title);
+  const cleanSubtitle = sanitizePlainText(subtitle);
+  const cleanContent = sanitizePlainText(content, true);
+  const cleanTasks = normalizeLessonTasks(tasks);
+  const xpReward = Number(xp_reward ?? 0);
   if (typeof title !== 'string' || !isOptionalText(subtitle) || !isOptionalText(content) ||
-      !['Python', 'JavaScript'].includes(language) || !Number.isSafeInteger(Number(lesson_number)) ||
+      !['Python', 'JavaScript', 'TypeScript'].includes(language) || !Number.isSafeInteger(Number(lesson_number)) ||
       Number(lesson_number) < 1 || !cleanTitle || !isTextWithinLimit(cleanTitle, LESSON_TEXT_LIMITS.title) ||
       !isTextWithinLimit(cleanSubtitle, LESSON_TEXT_LIMITS.subtitle) ||
       !isTextWithinLimit(cleanContent, LESSON_TEXT_LIMITS.content) ||
-      !Number.isSafeInteger(xpReward) || xpReward < 0 || xpReward > 10000 || !validTasks) {
+      !Number.isSafeInteger(xpReward) || xpReward < 0 || xpReward > 10000 || !cleanTasks) {
     return res.status(400).json({ error: 'Проверьте длину текста урока и добавьте задания с 2–6 вариантами ответа, включая правильный ответ' });
   }
 
@@ -964,28 +1086,61 @@ app.post('/api/admin/lessons', requireAdmin, requireChangedAdminPassword, (req, 
 });
 
 app.patch('/api/admin/lessons/:id', requireAdmin, requireChangedAdminPassword, (req, res) => {
-  const { title, subtitle, content, xp_reward } = req.body;
+  const { title, subtitle, content, xp_reward, tasks } = req.body;
   const cleanTitle = sanitizePlainText(title);
   const cleanSubtitle = sanitizePlainText(subtitle);
   const cleanContent = sanitizePlainText(content, true);
   const xpReward = Number(xp_reward ?? 0);
+  const cleanTasks = normalizeLessonTasks(tasks);
   if (typeof title !== 'string' || !isOptionalText(subtitle) || !isOptionalText(content) ||
       !cleanTitle || !isTextWithinLimit(cleanTitle, LESSON_TEXT_LIMITS.title) ||
       !isTextWithinLimit(cleanSubtitle, LESSON_TEXT_LIMITS.subtitle) ||
       !isTextWithinLimit(cleanContent, LESSON_TEXT_LIMITS.content) ||
-      !Number.isSafeInteger(xpReward) || xpReward < 0 || xpReward > 10000) {
-    return res.status(400).json({ error: 'Проверьте данные урока и допустимую длину полей' });
+      !Number.isSafeInteger(xpReward) || xpReward < 0 || xpReward > 10000 || !cleanTasks) {
+    return res.status(400).json({ error: 'Проверьте данные урока и задания: длину текста, правильный ответ и от 2 до 6 вариантов' });
   }
-  db.run(
-    `UPDATE lessons SET title = ?, subtitle = ?, content = ?, xp_reward = ? WHERE id = ?`,
-    [cleanTitle, cleanSubtitle, cleanContent, xpReward, req.params.id],
-    function (err) {
-      if (err) return res.status(500).json({ error: 'Не удалось обновить урок' });
-      if (!this.changes) return res.status(404).json({ error: 'Урок не найден' });
-      res.json({ updated: true });
-    }
-  );
+  db.get(`SELECT id FROM lessons WHERE id = ?`, [req.params.id], (lookupError, lesson) => {
+    if (lookupError) return res.status(500).json({ error: 'Не удалось проверить урок' });
+    if (!lesson) return res.status(404).json({ error: 'Урок не найден' });
+
+    db.serialize(() => {
+      db.run('BEGIN IMMEDIATE', (beginError) => {
+        if (beginError) return res.status(500).json({ error: 'Не удалось начать изменение урока' });
+        db.run(
+          `UPDATE lessons SET title = ?, subtitle = ?, content = ?, xp_reward = ? WHERE id = ?`,
+          [cleanTitle, cleanSubtitle, cleanContent, xpReward, req.params.id],
+          (updateError) => {
+            if (updateError) return rollbackLessonEdit(res, 'Не удалось обновить урок');
+            db.run(
+              `DELETE FROM user_mistakes WHERE task_id IN (SELECT id FROM tasks WHERE lesson_id = ?)`,
+              [req.params.id],
+              (mistakeError) => {
+                if (mistakeError) return rollbackLessonEdit(res, 'Не удалось обновить вопросы для повторения');
+                db.run(`DELETE FROM tasks WHERE lesson_id = ?`, [req.params.id], (deleteError) => {
+                  if (deleteError) return rollbackLessonEdit(res, 'Не удалось заменить задания урока');
+                  saveLessonTasks(req.params.id, cleanTasks, (taskError) => {
+                    if (taskError) return rollbackLessonEdit(res, 'Не удалось сохранить задания урока');
+                    db.run('COMMIT', (commitError) => {
+                      if (commitError) return rollbackLessonEdit(res, 'Не удалось сохранить изменения урока');
+                      res.json({ updated: true });
+                    });
+                  });
+                });
+              }
+            );
+          }
+        );
+      });
+    });
+  });
 });
+
+function rollbackLessonEdit(res, message) {
+  db.run('ROLLBACK', (rollbackError) => {
+    if (rollbackError) console.error('Unable to roll back lesson edit:', rollbackError.message);
+    res.status(500).json({ error: message });
+  });
+}
 
 app.delete('/api/admin/lessons/:id', requireAdmin, requireChangedAdminPassword, (req, res) => {
   db.run(
@@ -1010,7 +1165,13 @@ app.delete('/api/admin/lessons/:id', requireAdmin, requireChangedAdminPassword, 
 
 const PORT = Number(process.env.PORT) || 5000;
 bootstrapAdmin(() => {
-  app.listen(PORT, () => {
-    console.log(`Backend запущен на http://localhost:${PORT}`);
+  seedTypeScriptCourse((seedError) => {
+    if (seedError) {
+      console.error('Unable to seed TypeScript lessons:', seedError.message);
+      return;
+    }
+    app.listen(PORT, () => {
+      console.log(`Backend запущен на http://localhost:${PORT}`);
+    });
   });
 });

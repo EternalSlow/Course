@@ -165,13 +165,6 @@ export default function Lesson() {
 
         <div className="header-row">
           <h1 className="header-title">Ваш путь в программировании</h1>
-          <div className="header-action">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8a8fa3" strokeWidth="2.5">
-              <circle cx="5" cy="12" r="1" />
-              <circle cx="12" cy="12" r="1" />
-              <circle cx="19" cy="12" r="1" />
-            </svg>
-          </div>
         </div>
 
         {error && (

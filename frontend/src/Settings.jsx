@@ -112,6 +112,7 @@ export default function Settings() {
               <select value={language} onChange={(event) => setLanguage(event.target.value)}>
                 <option value="Python">Python</option>
                 <option value="JavaScript">JavaScript</option>
+                <option value="TypeScript">TypeScript</option>
               </select>
             </label>
 

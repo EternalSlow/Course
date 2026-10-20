@@ -207,7 +207,7 @@ body {
 }
 
 body.settings { padding: 0; }
-.settings-content { padding: 24px; }
+.settings-content { width: 100%; min-width: 0; padding: 24px; }
 .settings-content > .header-title { margin: 20px 0 28px; }
 .settings-back {
   color: var(--color-primary-dark);
@@ -221,6 +221,7 @@ body.settings { padding: 0; }
 .settings-field input,
 .settings-field select {
   width: 100%;
+  max-width: 100%;
   min-height: 48px;
   padding: 12px;
   border: 1.5px solid var(--color-card-border);
@@ -229,6 +230,12 @@ body.settings { padding: 0; }
   color: var(--color-text-strong);
   font: inherit;
   font-size: 14px;
+}
+.settings-field select { text-overflow: ellipsis; }
+.settings-field input:focus-visible,
+.settings-field select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 .settings-field input[type="file"] { padding: 10px; }
 .settings-error { color: #c62828; font-size: 14px; text-align: left; }
@@ -247,7 +254,12 @@ body.settings { padding: 0; }
 }
 
 body.admin { padding: 0; }
-.admin-content { padding: 24px; padding-bottom: 48px; }
+body.admin .admin.page-container {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.admin-content { width: 100%; min-width: 0; padding: 24px; padding-bottom: 48px; }
 .admin-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
 .admin-header .header-title { margin: 8px 0 0; }
 .admin-logout { width: auto; margin: 0; padding: 10px 14px; }
@@ -269,18 +281,28 @@ body.admin { padding: 0; }
   font-size: 14px;
 }
 .admin-form textarea { min-height: 72px; resize: vertical; }
-.admin-form-row { display: flex; gap: 10px; }
+.admin-form-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .admin-form-row > * { min-width: 0; flex: 1; }
+.admin-form input,
+.admin-form select,
+.admin-form textarea { max-width: 100%; }
+.admin-form input:focus-visible,
+.admin-form select:focus-visible,
+.admin-form textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
 .admin-error { margin: 12px 0; color: #c62828; font-size: 14px; text-align: left; }
 .admin-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
-.admin-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1px solid var(--color-card-border); border-radius: 8px; text-align: left; }
+.admin-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1px solid var(--color-card-border); border-radius: 8px; text-align: left; }
+.admin-row > div:first-child { min-width: 0; flex: 1 1 140px; }
 .admin-row strong,
 .admin-row span { display: block; overflow-wrap: anywhere; }
 .admin-row strong { color: var(--color-text-strong); font-size: 14px; }
 .admin-row span { margin-top: 3px; color: var(--color-muted); font-size: 12px; }
 .admin-user-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .admin-user-info img { width: 36px; height: 36px; flex: 0 0 auto; border-radius: 50%; object-fit: cover; }
-.admin-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.admin-actions { display: flex; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; gap: 6px; min-width: 0; max-width: 100%; }
 .admin-actions button,
 .admin-upload,
 .admin-secondary,
@@ -294,11 +316,28 @@ body.admin { padding: 0; }
   font-size: 12px;
   cursor: pointer;
 }
+.admin-actions button,
+.admin-upload { max-width: 100%; overflow-wrap: anywhere; }
+.admin-actions button:hover,
+.admin-upload:hover,
+.admin-secondary:hover { border-color: var(--color-primary); background: var(--color-primary-soft); }
+.admin-actions button:focus-visible,
+.admin-upload:focus-visible,
+.admin-secondary:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .admin-upload input { display: none; }
 .admin-inline-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 700; }
 .admin-inline-field input { width: 100px; }
 .admin-task { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--color-card-border); border-radius: 8px; }
 .admin-task h3 { color: var(--color-text-strong); font-size: 15px; }
+.admin-editor-field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 700; color: var(--color-text-strong); }
+.admin-editor-tasks { display: flex; flex-direction: column; gap: 12px; }
+.admin-editor-tasks h2,
+.admin-task-preview h2 { font-size: 18px; }
+.admin-task legend { padding: 0 6px; font-size: 15px; font-weight: 700; color: var(--color-text-strong); }
+.admin-task-preview { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--color-card-border); border-radius: 12px; background: #f8f9fb; }
+.admin-task-preview h3 { overflow-wrap: anywhere; font-size: 17px; color: var(--color-text-strong); }
+.admin-preview-options { display: grid; gap: 8px; }
+.admin-preview-options > span { padding: 10px 12px; border: 1px solid var(--color-card-border); border-radius: 8px; background: #fff; overflow-wrap: anywhere; }
 
 /* ============================================================
    GLOBAL SECTION TAG / GREETING
@@ -711,6 +750,11 @@ body.home .review-subtitle {
    PAGE: JOURNEY
    ============================================================ */
 body.journey { padding: 0; }
+body.journey .journey.page-container {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
 body.journey .app-container { padding-bottom: 120px; }
 
 body.journey .header-title { color: var(--color-text-strong); }
@@ -828,6 +872,26 @@ body.journey .footer-lock-message {
    PAGE: PRACTICE
    ============================================================ */
 body.practice { padding: 0; }
+body.practice .practice-last-lesson {
+  width: 100%;
+  margin: 0 0 16px;
+  padding: 13px 16px;
+  border: 1px solid var(--color-green-deep);
+  border-radius: 12px;
+  background: var(--color-green-deep);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+body.practice .practice-last-lesson:disabled {
+  border-color: var(--color-card-border);
+  background: #f7f8fa;
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
 
 /* Mistake review card (special green card) */
 body.practice .mistake-card {
@@ -2025,6 +2089,11 @@ body.league .leaderboard-item.highlight .lb-xp { color: var(--color-green-dark);
 .language-icon-js {
   background-color: #F0DB4F;
   color: #1A1A2E;
+}
+
+.language-icon-ts {
+  background-color: #3178C6;
+  color: #FFFFFF;
 }
 
 .language-card-info {
