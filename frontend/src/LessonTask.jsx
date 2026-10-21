@@ -161,7 +161,7 @@ export default function LessonTask() {
         setAnswerError(requestError instanceof TypeError
           ? 'Не удалось сохранить ответ. Проверьте соединение и попробуйте ещё раз.'
           : `Не удалось сохранить ответ. ${requestError.message}`);
-        if (practiceMode) return;
+        return;
       }
     }
     console.log('✅ Проверка:', selectedAnswer, '===', currentTask.correct_answer, '→', isCorrect);
