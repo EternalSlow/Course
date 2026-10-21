@@ -13,7 +13,7 @@ const fs = require('fs');
 app.use(cors());
 app.use(express.json());
 
-const db = new sqlite3.Database('./database.sqlite');
+const db = new sqlite3.Database(process.env.DATABASE_PATH || './database.sqlite');
 
 // ---- создание таблиц ----
 db.serialize(() => {
@@ -308,7 +308,7 @@ function seedTypeScriptCourse(callback) {
   });
 }
 
-const SECRET_KEY = 'your-super-secret-key';
+const SECRET_KEY = process.env.JWT_SECRET || 'your-super-secret-key';
 
 function bootstrapAdmin(onReady) {
   db.all(`PRAGMA table_info(users)`, (err, columns) => {
@@ -1171,7 +1171,7 @@ bootstrapAdmin(() => {
       return;
     }
     app.listen(PORT, () => {
-      console.log(`Backend запущен на http://localhost:${PORT}`);
+      console.log(`Backend запущен на порту ${PORT}`);
     });
   });
 });

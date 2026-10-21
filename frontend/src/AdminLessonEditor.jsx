@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import './style/style.css';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 const emptyTask = () => ({ code: '', question: '', correct_answer: '', options: '', explanation: '' });
 const emptyLesson = () => ({
   language: 'Python',

@@ -47,7 +47,7 @@ const LanguageSelection = () => {
     const selectedLang = languages.find(lang => lang.id === selectedLanguage);
     
     if (userId) {
-      const response = await fetch(`http://localhost:5000/api/user/${userId}/language`, {
+      const response = await fetch(`/api/user/${userId}/language`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language: selectedLang.name }),

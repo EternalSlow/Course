@@ -70,7 +70,7 @@ export default function Home() {
     if (!userId) return;
 
     const controller = new AbortController();
-    fetch(`http://localhost:5000/api/user/${userId}`, { signal: controller.signal })
+    fetch(`/api/user/${userId}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok)         throw new Error(`Не удалось загрузить профиль (${response.status})`);
         return response.json();
@@ -93,7 +93,7 @@ export default function Home() {
     if (!userId) return;
 
     const controller = new AbortController();
-    fetch(`http://localhost:5000/api/user/${userId}/lessons`, { signal: controller.signal })
+    fetch(`/api/user/${userId}/lessons`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error(`Unable to load lessons (${response.status})`);
         return response.json();
@@ -126,7 +126,7 @@ export default function Home() {
   const [goal, setGoal] = useState(null);
   useEffect(() => {
     if (!user?.userId) return;
-    fetch(`http://localhost:5000/api/user/${user.userId}/goal`)
+    fetch(`/api/user/${user.userId}/goal`)
       .then(r => r.ok ? r.json() : null)
       .then(setGoal)
       .catch(() => {});
@@ -154,7 +154,7 @@ export default function Home() {
           >
             {profile?.avatar ? (
               <img
-                src={`http://localhost:5000${profile.avatar}`}
+                src={profile.avatar}
                 alt=""
                 onError={() => {
                   setProfileResult((current) => current?.userId === userId

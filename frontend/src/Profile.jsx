@@ -61,7 +61,7 @@ export default function Profile() {
 
   useEffect(() => {
     if (!user?.userId) return;
-    fetch(`http://localhost:5000/api/user/${user.userId}`)
+    fetch(`/api/user/${user.userId}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then(setProfile)
       .catch(() => setError('Не удалось загрузить профиль'));
@@ -98,7 +98,7 @@ export default function Profile() {
         <div className="profile-info">
           <div className="profile-avatar">
             {profile?.avatar
-              ? <img src={`http://localhost:5000${profile.avatar}`} alt={displayName} />
+              ? <img src={profile.avatar} alt={displayName} />
               : initials}
           </div>
           <div className="profile-details">

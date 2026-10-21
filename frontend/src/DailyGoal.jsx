@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './DailyGoal.css';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 
 const goalOptions = [
   { id: 'Just a taste',    minutes: 5,  xp: 10, label: 'Попробовать',    time: '5 мин в день' },
