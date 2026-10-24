@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './style/style.css';
-import { apiUrl } from './api';
+import { apiFetch, apiUrl } from './api';
 
 const languages = [
   {
@@ -48,7 +48,7 @@ const LanguageSelection = () => {
     const selectedLang = languages.find(lang => lang.id === selectedLanguage);
     
     if (userId) {
-      const response = await fetch(apiUrl(`/api/user/${userId}/language`), {
+      const response = await apiFetch(apiUrl(`/api/user/${userId}/language`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language: selectedLang.name }),

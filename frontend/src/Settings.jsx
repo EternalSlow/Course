@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { API_BASE } from './api';
+import { API_BASE, apiFetch } from './api';
 import './style/style.css';
 
 export default function Settings() {
@@ -22,7 +22,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (!user?.userId) return;
-    fetch(`${API_BASE}/user/${user.userId}`)
+    apiFetch(`${API_BASE}/user/${user.userId}`)
       .then((response) => {
         if (!response.ok) throw new Error('Не удалось загрузить настройки');
         return response.json();
@@ -42,7 +42,7 @@ export default function Settings() {
     setSaving(true);
 
     try {
-      const profileResponse = await fetch(`${API_BASE}/user/${user.userId}/profile`, {
+      const profileResponse = await apiFetch(`${API_BASE}/user/${user.userId}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
@@ -50,7 +50,7 @@ export default function Settings() {
       const profileData = await profileResponse.json();
       if (!profileResponse.ok) throw new Error(profileData.error || 'Не удалось изменить имя.');
 
-      const languageResponse = await fetch(`${API_BASE}/user/${user.userId}/language`, {
+      const languageResponse = await apiFetch(`${API_BASE}/user/${user.userId}/language`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language }),
@@ -61,7 +61,7 @@ export default function Settings() {
       if (avatar) {
         const formData = new FormData();
         formData.append('avatar', avatar);
-        const avatarResponse = await fetch(`${API_BASE}/user/${user.userId}/avatar`, {
+        const avatarResponse = await apiFetch(`${API_BASE}/user/${user.userId}/avatar`, {
           method: 'POST',
           body: formData,
         });

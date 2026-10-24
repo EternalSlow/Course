@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { API_BASE, assetUrl } from './api';
+import { API_BASE, apiFetch, assetUrl } from './api';
 import './style/style.css';
 
 async function adminApi(token, path, options = {}) {
   const headers = { Authorization: `Bearer ${token}`, ...options.headers };
-  const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const response = await apiFetch(`${API_BASE}${path}`, { ...options, headers });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || 'Не удалось выполнить запрос');
   return data;

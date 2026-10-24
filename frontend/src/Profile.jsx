@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './style/style.css';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { apiUrl, assetUrl } from './api';
+import { apiFetch, apiUrl, assetUrl } from './api';
 
 const NavIcons = {
   home: (
@@ -62,7 +62,7 @@ export default function Profile() {
 
   useEffect(() => {
     if (!user?.userId) return;
-    fetch(apiUrl(`/api/user/${user.userId}`))
+    apiFetch(apiUrl(`/api/user/${user.userId}`))
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then(setProfile)
       .catch(() => setError('Не удалось загрузить профиль'));

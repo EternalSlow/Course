@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import './style/style.css';
-import { API_BASE } from './api';
+import { API_BASE, apiFetch } from './api';
 const emptyTask = () => ({ code: '', question: '', correct_answer: '', options: '', explanation: '' });
 const emptyLesson = () => ({
   language: 'Python',
@@ -14,7 +14,7 @@ const emptyLesson = () => ({
 });
 
 async function lessonApi(token, path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await apiFetch(`${API_BASE}${path}`, {
     ...options,
     headers: { Authorization: `Bearer ${token}`, ...options.headers },
   });

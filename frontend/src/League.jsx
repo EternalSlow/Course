@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './style/style.css';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { API_BASE, assetUrl } from './api';
+import { API_BASE, apiFetch, assetUrl } from './api';
 
 const podiumPlaces = {
   1: { label: '★ 1-Е', place: 'first' },
@@ -72,7 +72,7 @@ export default function League() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch(`${API_BASE}/league`, { signal: controller.signal })
+    apiFetch(`${API_BASE}/league`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.json();

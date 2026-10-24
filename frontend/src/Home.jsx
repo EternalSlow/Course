@@ -2,7 +2,7 @@ import './style/style.css';
 import { NavLink, useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
-import { apiUrl, assetUrl } from './api';
+import { apiFetch, apiUrl, assetUrl } from './api';
 import robot from './assets/robot.svg';
 
 const NavIcons = {
@@ -71,7 +71,7 @@ export default function Home() {
     if (!userId) return;
 
     const controller = new AbortController();
-    fetch(apiUrl(`/api/user/${userId}`), { signal: controller.signal })
+    apiFetch(apiUrl(`/api/user/${userId}`), { signal: controller.signal })
       .then((response) => {
         if (!response.ok)         throw new Error(`Не удалось загрузить профиль (${response.status})`);
         return response.json();
@@ -94,7 +94,7 @@ export default function Home() {
     if (!userId) return;
 
     const controller = new AbortController();
-    fetch(apiUrl(`/api/user/${userId}/lessons`), { signal: controller.signal })
+    apiFetch(apiUrl(`/api/user/${userId}/lessons`), { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error(`Unable to load lessons (${response.status})`);
         return response.json();
@@ -127,7 +127,7 @@ export default function Home() {
   const [goal, setGoal] = useState(null);
   useEffect(() => {
     if (!user?.userId) return;
-    fetch(apiUrl(`/api/user/${user.userId}/goal`))
+    apiFetch(apiUrl(`/api/user/${user.userId}/goal`))
       .then(r => r.ok ? r.json() : null)
       .then(setGoal)
       .catch(() => {});

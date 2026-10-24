@@ -46,4 +46,6 @@ npm ci
 npm run build:android
 ```
 
-The APK is written to `frontend/byte-debug.apk`. This build connects to `http://course.neur0devil.run.place:5000`, so the device must be able to reach that address. The backend uses HTTP on port 5000; Android permits cleartext traffic only to that backend host.
+The APK is written to `frontend/byte-debug.apk`. The app sends API requests to `http://course.neur0devil.run.place:8080`, where the frontend Nginx service forwards `/api` requests to the backend. The server must expose the frontend on port 8080, and the device must be able to reach that host and port. If you set a different `WEB_PORT`, update the Android build scripts in `frontend/package.json` to match.
+
+To build the release variant, run `npm run build:android:release` from `frontend`. It writes an unsigned APK to `frontend/byte-release-unsigned.apk`. Configure a release signing key before you install or distribute this APK.

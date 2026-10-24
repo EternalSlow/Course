@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './style/style.css';
 import { useAuth } from './AuthContext';
-import { apiUrl } from './api';
+import { apiFetch, apiUrl } from './api';
 
 const Register = () => {
   const [username, setUsername] = useState('');
@@ -20,7 +20,7 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(apiUrl('/api/register'), {
+      const response = await apiFetch(apiUrl('/api/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password }),
@@ -42,7 +42,7 @@ const Register = () => {
       // ✅ localStorage не трогаем — это уже делает AuthContext.login()
 
       navigate('/select-language', { replace: true });
-    } catch (err) {
+    } catch {
       setError('Не удалось связаться с сервером. Проверьте соединение.');
     } finally {
       setLoading(false);

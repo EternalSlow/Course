@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './DailyGoal.css';
-import { API_BASE } from './api';
+import { API_BASE, apiFetch } from './api';
 
 const goalOptions = [
   { id: 'Just a taste',    minutes: 5,  xp: 10, label: 'Попробовать',    time: '5 мин в день' },
@@ -19,7 +19,7 @@ export default function DailyGoal({ userId, onNext }) {
   useEffect(() => {
     if (!userId) return;
 
-    fetch(`${API_BASE}/user/${userId}/current-lesson`)
+    apiFetch(`${API_BASE}/user/${userId}/current-lesson`)
       .then(res => res.json())
       .then(data => {
         if (data.lesson) {
@@ -38,7 +38,7 @@ export default function DailyGoal({ userId, onNext }) {
 
     try {
       // Сохраняем цель на сервере
-      const res = await fetch(`${API_BASE}/user/${userId}/goal`, {
+      const res = await apiFetch(`${API_BASE}/user/${userId}/goal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import './style/style.css';
-import { API_BASE } from './api';
+import { API_BASE, apiFetch } from './api';
 
 const NavCheckIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -88,7 +88,7 @@ export default function Lesson() {
     setLanguage('Python');
 
     try {
-      const res = await fetch(`${API_BASE}/user/${user.userId}/lessons`, { signal });
+      const res = await apiFetch(`${API_BASE}/user/${user.userId}/lessons`, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { API_BASE } from './api';
+import { API_BASE, apiFetch } from './api';
 import './style/style.css';
 import robot from './assets/robot.svg';
 import LessonComplete from './LessonComplete';
@@ -95,7 +95,7 @@ export default function LessonTask() {
     const taskUrl = practiceMode
       ? `${API_BASE}/user/${userId}/practice/${practiceTaskId}`
       : `${API_BASE}/user/${userId}/lesson/${id}/tasks`;
-    fetch(taskUrl, { signal: controller.signal })
+    apiFetch(taskUrl, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error(`Unable to load lesson tasks (${res.status})`);
         return res.json();
@@ -148,7 +148,7 @@ export default function LessonTask() {
     let isCorrect = selectedAnswer === currentTask.correct_answer;
     if (userId && currentTask.id && answerTrackingReady) {
       try {
-        const response = await fetch(`${API_BASE}/user/${userId}/task/${currentTask.id}/answer`, {
+        const response = await apiFetch(`${API_BASE}/user/${userId}/task/${currentTask.id}/answer`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ answer: selectedAnswer }),
@@ -212,7 +212,7 @@ export default function LessonTask() {
     let nextLessonNumber = lesson.number + 1;
     let completionData = null;
     try {
-      const res = await fetch(`${API_BASE}/user/${userId}/complete-lesson`, {
+      const res = await apiFetch(`${API_BASE}/user/${userId}/complete-lesson`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lessonNumber: lesson.number }),
@@ -229,7 +229,7 @@ export default function LessonTask() {
     // 2. Загружаем данные следующего урока (для заголовка)
     let nextLessonTitle = 'Следующий урок';
     try {
-      const res = await fetch(`${API_BASE}/user/${userId}/lesson/${nextLessonNumber}`);
+      const res = await apiFetch(`${API_BASE}/user/${userId}/lesson/${nextLessonNumber}`);
       if (res.ok) {
         const data = await res.json();
         nextLessonTitle = data.title || `Урок ${nextLessonNumber}`;
@@ -242,7 +242,7 @@ export default function LessonTask() {
     let userXP = 0;
     let streak = 0;
     try {
-      const res = await fetch(`${API_BASE}/user/${userId}`);
+      const res = await apiFetch(`${API_BASE}/user/${userId}`);
       if (res.ok) {
         const data = await res.json();
         userXP = data.xp || 0;
@@ -256,7 +256,7 @@ export default function LessonTask() {
     let dailyGoal = 50;
     let dailyXP = 0;
     try {
-      const res = await fetch(`${API_BASE}/user/${userId}/goal`);
+      const res = await apiFetch(`${API_BASE}/user/${userId}/goal`);
       if (res.ok) {
         const data = await res.json();
         dailyGoal = data.daily_goal || 50;

@@ -51,8 +51,9 @@ body {
 }
 
 #root {
-  width: 390px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 420px;
+  min-width: 0;
   margin: 0 auto;
   text-align: center;
   min-height: 100svh;

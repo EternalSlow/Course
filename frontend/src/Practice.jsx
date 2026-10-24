@@ -3,7 +3,7 @@ import './style/style.css';
 import { NavLink, useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
-import { API_BASE } from './api';
+import { API_BASE, apiFetch } from './api';
 
 const NavIcons = {
   home: (
@@ -68,8 +68,8 @@ export default function Practice() {
     const controller = new AbortController();
 
     Promise.all([
-      fetch(`${API_BASE}/user/${user.userId}/practice`, { signal: controller.signal }),
-      fetch(`${API_BASE}/user/${user.userId}/lessons`, { signal: controller.signal }),
+      apiFetch(`${API_BASE}/user/${user.userId}/practice`, { signal: controller.signal }),
+      apiFetch(`${API_BASE}/user/${user.userId}/lessons`, { signal: controller.signal }),
     ])
       .then(async ([practiceResponse, lessonsResponse]) => {
         const [practiceData, lessonsData] = await Promise.all([

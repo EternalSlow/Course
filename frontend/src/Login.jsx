@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { apiUrl } from './api';
+import { apiFetch, apiUrl } from './api';
 import './style/style.css';
 
 export default function Login() {
@@ -15,7 +15,7 @@ export default function Login() {
     e.preventDefault();
     setError(null);
     try {
-      const res = await fetch(apiUrl('/api/login'), {
+      const res = await apiFetch(apiUrl('/api/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ login, password }),
