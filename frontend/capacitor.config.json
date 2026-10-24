@@ -1,0 +1,8 @@
+{
+  "appId": "com.neur0devil.course",
+  "appName": "Byte",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": true
+  }
+}

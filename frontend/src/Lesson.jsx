@@ -2,8 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import './style/style.css';
-
-const API_BASE = '/api';
+import { API_BASE } from './api';
 
 const NavCheckIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">

@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { API_BASE } from './api';
 import './style/style.css';
-
-const API_BASE = '/api';
 
 export default function Settings() {
   const { user, login, logout } = useAuth();

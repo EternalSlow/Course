@@ -36,3 +36,14 @@ The database and uploaded avatars are stored in Docker volumes. `docker compose 
 ## Local development
 
 Run the backend from `backend` with `npm start` and the frontend from `frontend` with `npm run dev`. The frontend development server proxies API and avatar requests to `http://localhost:5000`.
+
+## Android app
+
+Install the Android SDK (including Android SDK Platform 36) and Java 21. Then build a debug APK from `frontend`:
+
+```sh
+npm ci
+npm run build:android
+```
+
+The APK is written to `frontend/byte-debug.apk`. This build connects to `http://course.neur0devil.run.place:5000`, so the device must be able to reach that address. The backend uses HTTP on port 5000; Android permits cleartext traffic only to that backend host.

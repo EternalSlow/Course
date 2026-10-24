@@ -1,12 +1,21 @@
-TODO
+# Local task notes and secrets
+/TODO
 .env
-frontend/node_modules
-frontend/dist
-frontend/icon
-frontend/package*
-frontend/.oxlintrc.json
-frontend/vite.config.js
-backend/node_modules
-backend/uploads
-backend/database.sqlite
-backend/package*
+.env.*
+!.env.example
+
+# Dependencies
+**/node_modules/
+
+# Build output and distributable packages
+/frontend/dist/
+/frontend/byte-debug.apk
+*.apk
+*.aab
+
+# Local application data
+/backend/uploads/
+/backend/database.sqlite
+
+# Unused legacy artwork
+/frontend/icon/

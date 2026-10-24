@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { API_BASE } from './api';
 import './style/style.css';
 import robot from './assets/robot.svg';
 import LessonComplete from './LessonComplete';
@@ -40,8 +41,6 @@ const FALLBACK_TASKS = [
     explanation: 'В Python после условия if ставится двоеточие.',
   },
 ];
-
-const API_BASE = '/api';
 
 export default function LessonTask() {
   const { id } = useParams(); // номер урока из URL

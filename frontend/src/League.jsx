@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import './style/style.css';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { API_BASE, assetUrl } from './api';
 
-const API_BASE = '/api';
 const podiumPlaces = {
   1: { label: '★ 1-Е', place: 'first' },
   2: { label: '2-Е', place: 'second' },
@@ -137,7 +137,7 @@ export default function League() {
             <div key={p.id} className={`podium-card ${p.place}`}>
               <div className="podium-rank">{p.label}</div>
               <div className="podium-avatar">
-                {p.avatar ? <img src={p.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : getInitials(p.username)}
+                {p.avatar ? <img src={assetUrl(p.avatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : getInitials(p.username)}
               </div>
               <div className="podium-name">{p.username}</div>
               <div className="podium-xp">{formatXP(p.xp)}</div>
@@ -172,7 +172,7 @@ export default function League() {
             >
               <div className="lb-rank">{row.rank}</div>
               <div className="lb-avatar">
-                {row.avatar ? <img src={row.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : getInitials(row.username)}
+                {row.avatar ? <img src={assetUrl(row.avatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : getInitials(row.username)}
               </div>
               <div className="lb-info">
                 <div className="lb-name">{row.username}</div>

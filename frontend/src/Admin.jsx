@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { API_BASE, assetUrl } from './api';
 import './style/style.css';
-
-const API_BASE = '/api';
 
 async function adminApi(token, path, options = {}) {
   const headers = { Authorization: `Bearer ${token}`, ...options.headers };
@@ -202,7 +201,7 @@ export default function Admin() {
                 {users.map((item) => (
                   <article className="admin-row" key={item.id}>
                     <div className="admin-user-info">
-                      {item.avatar && <img src={item.avatar} alt="" />}
+                      {item.avatar && <img src={assetUrl(item.avatar)} alt="" />}
                       <div><strong>{item.username}</strong><span>{item.email}</span></div>
                     </div>
                     <div className="admin-actions">

@@ -3,8 +3,7 @@ import './style/style.css';
 import { NavLink, useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
-
-const API_BASE = '/api';
+import { API_BASE } from './api';
 
 const NavIcons = {
   home: (
